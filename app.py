@@ -1,7 +1,7 @@
 import streamlit as st  # type: ignore
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
-from sklearn.tree import DecisionTreeRegressor  # type: ignore
+from sklearn.linear_model import LinearRegression  # type: ignore
 import pickle
 import os
 from languages import LANGUAGES, LANG_LIST  # type: ignore
@@ -46,11 +46,14 @@ FEATURE_COLS = ['hall', 'bedroom', 'kitchen', 'sqft', 'floor', 'bathroom', 'gard
 @st.cache_resource
 def load_model():
     if os.path.exists('house_model.pkl'):
-        with open('house_model.pkl','rb') as f:
-            return pickle.load(f)
-    # Re-train if missing
+        try:
+            with open('house_model.pkl','rb') as f:
+                return pickle.load(f)
+        except Exception:
+            pass
+    # Retrain on updated data
     df = pd.read_csv('house_prediction.csv')
-    model = DecisionTreeRegressor(random_state=42)
+    model = LinearRegression()
     model.fit(df[FEATURE_COLS], df['price'])
     with open('house_model.pkl','wb') as f:
         pickle.dump(model, f)
@@ -61,21 +64,21 @@ model = load_model()
 # ── Material estimation engine ────────────────
 def estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden, parking, pooja_room, quality_key):
     s = sqft
-    # Quality multiplier for quantities
-    qm = 1.15 if quality_key == "High" else (0.90 if quality_key == "Low" else 1.0)
+    # Quality multiplier for quantities removed (user provided specific 1 sqft rates)
+    qm = 1.0 
 
     stages = [
         {"icon":"🧱","title":"1. Foundation (Basement)","items":[
-            ("Cement", f"{int(s*.12*qm)} Bags"), ("Sand", f"{int(s*.30*qm)} CFT"),
-            ("Gravel (Jalli)", f"{int(s*.40*qm)} CFT"), ("Steel Rods (TMT)", f"{int(s*.80*qm)} Kg"),
+            ("Cement", f"{int(s*0.10)} Bags"), ("Sand", f"{int(s*0.35)} CFT"),
+            ("Gravel (Jalli)", f"{int(s*.40)} CFT"), ("Steel Rods (TMT)", f"{int(s*1.0)} Kg"),
             ("Bricks / Stones", f"{int(s*4)} Nos"), ("Water", f"{int(s*10)} Litres")]},
         {"icon":"🧱","title":"2. Structure (Column, Beam, Slab)","items":[
-            ("Cement", f"{int(s*.20*qm)} Bags"), ("Sand", f"{int(s*.50*qm)} CFT"),
-            ("Aggregate (Jalli)", f"{int(s*.60*qm)} CFT"), ("Steel (TMT bars)", f"{int(s*2.5*qm)} Kg"),
+            ("Cement", f"{int(s*0.15)} Bags"), ("Sand", f"{int(s*0.55)} CFT"),
+            ("Aggregate (Jalli)", f"{int(s*.60)} CFT"), ("Steel (TMT bars)", f"{int(s*3.0)} Kg"),
             ("Centering Sheets", f"{int(s*1.2)} Sqft")]},
         {"icon":"🧱","title":"3. Walls","items":[
-            ("Bricks / AAC Blocks", f"{int(s*9*floor)} Nos"),
-            ("Cement", f"{int(s*.10*qm)} Bags"), ("Sand", f"{int(s*.25*qm)} CFT")]},
+            ("Bricks / AAC Blocks", f"{int(s*8)} Nos"),
+            ("Cement", f"{int(s*0.08)} Bags"), ("Sand", f"{int(s*0.25)} CFT")]},
         {"icon":"🚪","title":"4. Doors & Windows","items":[
             ("Main Door", "1 Nos"),
             ("Bedroom Doors", f"{bedroom} Nos"),
@@ -89,16 +92,16 @@ def estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden, pa
             ("Switch Boards", f"{int(s/80 + bedroom)} Nos"), ("MCB Box", f"{floor} Nos"),
             ("Lights", f"{int(s/50 + bedroom*2)} Nos"), ("Fans", f"{hall+bedroom} Nos")]},
         {"icon":"🚿","title":"6. Plumbing","items":[
-            ("PVC/CPVC Pipes", f"{int(s*1.5)} Metres"), ("Taps", f"{bathroom*3 + kitchen*2} Nos"),
+            ("PVC/CPVC Pipes", f"{int(s*0.4)} Metres"), ("Taps", f"{bathroom*3 + kitchen*2} Nos"),
             ("Shower Sets", f"{bathroom} Nos"), ("Toilet Fittings", f"{bathroom} Sets"),
             ("Water Tank", f"{bathroom*500} Litres")]},
         {"icon":"🧴","title":"7. Plastering & Finishing","items":[
-            ("Cement", f"{int(s*.05)} Bags"), ("Sand", f"{int(s*.15)} CFT"),
-            ("Wall Putty", f"{int(s*.05)} Kg"), ("Primer", f"{int(s*.08)} Litres"),
-            ("Paint (2 coats)", f"{int(s*.12)} Litres")]},
+            ("Cement", f"{int(s*0.04)} Bags"), ("Sand", f"{int(s*0.15)} CFT"),
+            ("Wall Putty", f"{int(s*0.15)} Kg"), ("Primer", f"{int(s*0.025)} Litres"),
+            ("Paint (2 coats)", f"{int(s*0.03)} Litres")]},
         {"icon":"🧱","title":"8. Flooring","items":[
-            ("Tiles / Marble / Granite", f"{int(s*1.1)} Sqft"),
-            ("Tile Adhesive", f"{int(s*.03)} Bags"), ("Cement (base)", f"{int(s*.03)} Bags")]},
+            ("Tiles / Marble / Granite", f"{int(s*1.05)} Sqft"),
+            ("Tile Adhesive", f"{int(s*0.02)} Bags"), ("Cement (base)", f"{int(s*0.03)} Bags")]},
         {"icon":"🍳","title":"9. Kitchen","items":[
             ("Granite Slab", f"{kitchen*22} Sqft"), ("Kitchen Sink", f"{kitchen} Nos"),
             ("Cabinets", f"{kitchen*3} Nos"), ("Wall Tiles", f"{kitchen*40} Sqft")]},
@@ -118,9 +121,9 @@ st.markdown(f'<div class="hero-sub">{L["subtitle"]}</div>', unsafe_allow_html=Tr
 
 # ── Material Quality labels ───────────────────
 Q_LEVELS = {
-    "Low":    {"mult": 0.85, "label": "📉 Budget (Low Cost)"},
-    "Medium": {"mult": 1.00, "label": "🏢 Standard (Medium)"},
-    "High":   {"mult": 1.35, "label": "✨ Premium (High End)"}
+    "Low":    {"mult": 0.78260869565, "label": "📉 Budget (Low Cost: ₹1800/sqft)"},
+    "Medium": {"mult": 1.0,           "label": "🏢 Standard (Medium: ₹2300/sqft)"},
+    "High":   {"mult": 1.21739130435, "label": "✨ Premium (High End: ₹2800/sqft)"}
 }
 
 # ── Inputs ────────────────────────────────────
@@ -241,7 +244,6 @@ if st.button(L["predict_btn"], use_container_width=True, type="primary"):
             cb.markdown(f'<div class="stage-card"><div class="stage-title">{stg2["icon"]} {stg2["title"]}</div>{rows2}</div>', unsafe_allow_html=True)
 
     # ── Grand total ───────────────────────────
-    gtm = 1.15 if quality_key == "High" else (0.90 if quality_key == "Low" else 1.0)
     st.markdown(f'<div class="sec-hdr">{L["grand_total"]}</div>', unsafe_allow_html=True)
     st.table(pd.DataFrame({
         L["material_col"]: [
@@ -251,10 +253,10 @@ if st.button(L["predict_btn"], use_container_width=True, type="primary"):
             "🪵 Centering Sheets", "🚿 PVC/CPVC Pipes"
         ],
         L["qty_col"]: [
-            f"{int(sqft*.50*gtm)} Bags", f"{int(sqft*1.20*gtm)} CFT", f"{int(sqft*3.3*gtm)} Kg",
-            f"{int(sqft*9*floor)} Nos", f"{int(sqft*1.1)} Sqft", f"{int(sqft*.12)} Litres",
-            f"{int(sqft*.05)} Kg", f"{int(sqft*.08)} Litres", f"{int(sqft*.03)} Bags",
-            f"{int(sqft*1.2)} Sqft", f"{int(sqft*1.5)} Metres"
+            f"{int(sqft*0.4)} Bags", f"{int(sqft*1.3)} CFT", f"{int(sqft*4)} Kg",
+            f"{int(sqft*8)} Nos", f"{int(sqft*1.05)} Sqft", f"{int(sqft*0.03)} Litres",
+            f"{int(sqft*0.15)} Kg", f"{int(sqft*0.025)} Litres", f"{int(sqft*0.02)} Bags",
+            f"{int(sqft*1.2)} Sqft", f"{int(sqft*0.4)} Metres"
         ],
     }))
 

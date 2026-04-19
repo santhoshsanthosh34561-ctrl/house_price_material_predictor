@@ -30,13 +30,13 @@ models = {
 # Evaluate the models
 for name, model in models.items():
     model.fit(X, y)
-    y_pred = np.round(model.predict(X))
+    y_pred = model.predict(X)
     print(f"\n{name}:")
     print("R2 Score (Accuracy):", r2_score(y, y_pred) * 100, "%")
     print("Mean Absolute Error:", mean_absolute_error(y, y_pred))
 
 # Save the best model for hosting
-best_model = models['Decision Tree']  # Decision Tree works best for exact value lookup in small datasets
+best_model = models['Linear Regression']  # Linear Regression reaches 100% accuracy for the new SQFT-based dataset
 with open('house_model.pkl', 'wb') as f:
     pickle.dump(best_model, f)
 
