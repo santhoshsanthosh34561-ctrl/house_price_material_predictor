@@ -398,8 +398,8 @@ if uploaded_file is not None:
         new_df = pd.read_csv(uploaded_file)
         if all(col in new_df.columns for col in FEATURE_COLS + ['price']):
             new_df.to_csv("house_prediction.csv", index=False)
-            if os.path.exists("house_model_v2.pkl"):
-                os.remove("house_model_v2.pkl")
+            if os.path.exists("house_model_v3.pkl"):
+                os.remove("house_model_v3.pkl")
             st.cache_resource.clear()
             st.sidebar.success("✅ Dataset Updated! Model Retrained!")
         else:
@@ -410,9 +410,9 @@ if uploaded_file is not None:
 # ── Model ─────────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    if os.path.exists('house_model_v2.pkl'):
+    if os.path.exists('house_model_v3.pkl'):
         try:
-            with open('house_model_v2.pkl', 'rb') as f:
+            with open('house_model_v3.pkl', 'rb') as f:
                 return pickle.load(f)
         except Exception:
             pass
@@ -420,7 +420,7 @@ def load_model():
     df = pd.read_csv('house_prediction.csv')
     model = LinearRegression()
     model.fit(df[FEATURE_COLS], df['price'])
-    with open('house_model_v2.pkl', 'wb') as f:
+    with open('house_model_v3.pkl', 'wb') as f:
         pickle.dump(model, f)
     return model
 
@@ -503,8 +503,7 @@ else: loc_mult, loc_label = 0.85, "Rural / Outskirts (Lower Cost)"
 
 inp = pd.DataFrame([[hall, bedroom, kitchen, sqft, floor, bathroom, garden, parking, pooja_room]], columns=FEATURE_COLS)
 base_pred = model.predict(inp)[0]
-floor_mult = 1.0 + ((floor - 1) * 0.1)
-pred = base_pred * Q["mult"] * floor_mult * loc_mult
+pred = base_pred * Q["mult"] * loc_mult
 
 st.markdown("---")
 # nav removed
