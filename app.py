@@ -506,17 +506,11 @@ floor_mult = 1.0 + ((floor - 1) * 0.1)
 pred = base_pred * Q["mult"] * floor_mult * loc_mult
 
 st.markdown("---")
-nav_option = st.selectbox("Navigation", [
-    "🔮 Prediction & Cost",
-    "📍 Location Map",
-    "🤖 Smart Recommendation",
-    "📊 EDA & Analysis",
-    "🖼️ Image Evaluator",
-    "💬 AI Chat"
-], label_visibility="collapsed")
+# nav removed
 st.markdown("---")
 
-if nav_option == "🔮 Prediction & Cost":
+if True:
+    st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px;">Step 1: 🔮 Prediction & Cost</div>', unsafe_allow_html=True)
     # ── Config summary chips ──────────────────────────────────────────────────
     chips = [
         f"📐 {sqft} sqft", f"🏗️ {quality_key}", f"🛏️ {bedroom} Bed",
@@ -681,9 +675,9 @@ if nav_option == "🔮 Prediction & Cost":
         use_container_width=True,
     )
 
-elif nav_option == "📍 Location Map":
+if True:
     # ── Location Map ──────────────────────────────────────────────────────────
-    st.markdown('<div class="sec-hdr">📍 Property Location (Interactive)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 2: 📍 Property Location (Interactive)</div>', unsafe_allow_html=True)
     st.write("Click anywhere on the map OR type your location below. Prices adjust automatically based on distance from the city center!")
 
     col_search, col_btn = st.columns([4, 1])
@@ -728,9 +722,9 @@ elif nav_option == "📍 Location Map":
 
 
 
-elif nav_option == "🤖 Smart Recommendation":
+if True:
     # ── Smart Recommendation System ────────────────────────────────────────────
-    st.markdown('<div class="sec-hdr">💡 Smart Budget Planner (AI Recommender)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 3: 🤖 Smart Budget Planner (AI Recommender)</div>', unsafe_allow_html=True)
     st.write("Enter your total budget, and Santhosh AI will recommend the best house configurations for you!")
 
     user_budget = st.number_input("💰 Your Maximum Budget (₹)", min_value=500000, max_value=500000000, value=3000000, step=100000)
@@ -774,8 +768,8 @@ elif nav_option == "🤖 Smart Recommendation":
                 <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
             </div>''', unsafe_allow_html=True)
 
-elif nav_option == "📊 EDA & Analysis":
-    st.markdown('<div class="sec-hdr">📊 Data Analysis Dashboard</div>', unsafe_allow_html=True)
+if True:
+    st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 4: 📊 EDA & Data Analysis Dashboard</div>', unsafe_allow_html=True)
     try:
         raw_df = pd.read_csv('house_prediction.csv')
         option = st.selectbox("Choose Analysis", [
@@ -864,8 +858,8 @@ elif nav_option == "📊 EDA & Analysis":
     except Exception as e:
         st.error(f"Error loading analytics: {e}")
 
-elif nav_option == "🖼️ Image Evaluator":
-    st.markdown('<div class="sec-hdr">🖼️ AI Image-based House Evaluator</div>', unsafe_allow_html=True)
+if True:
+    st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 5: 🖼️ AI Image-based House Evaluator</div>', unsafe_allow_html=True)
     st.write("Upload a picture of a house, and our AI will analyze the exterior to estimate its construction quality, size, and approximate cost!")
 
     house_image = st.file_uploader("Upload House Image", type=["png", "jpg", "jpeg"], key="house_img")
@@ -904,7 +898,7 @@ elif nav_option == "🖼️ Image Evaluator":
                         except Exception as e:
                             st.error(f"Error during image analysis: {e}")
 
-elif nav_option == "💬 AI Chat":
+if True:
     st.markdown(f'<div class="sec-hdr">🤖 {{L.get("ai_chat", "Santhosh AI Assistant")}}</div>', unsafe_allow_html=True)
     st.info("💡 Enter your Gemini API key in the sidebar to enable real AI responses in Tamil.")
 
