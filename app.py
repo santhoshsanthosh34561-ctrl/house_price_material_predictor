@@ -506,15 +506,14 @@ floor_mult = 1.0 + ((floor - 1) * 0.1)
 pred = base_pred * Q["mult"] * floor_mult * loc_mult
 
 st.markdown("---")
-nav_option = st.selectbox("🎯 Choose Feature", [
+nav_option = st.selectbox("Navigation", [
     "🔮 Prediction & Cost",
     "📍 Location Map",
-    "⏳ Future Price Prediction",
     "🤖 Smart Recommendation",
     "📊 EDA & Analysis",
     "🖼️ Image Evaluator",
     "💬 AI Chat"
-])
+], label_visibility="collapsed")
 st.markdown("---")
 
 if nav_option == "🔮 Prediction & Cost":
@@ -727,22 +726,7 @@ elif nav_option == "📍 Location Map":
 
     st.info(f"📍 **Distance:** {dist_km:.1f} km &nbsp;|&nbsp; **Zone:** {loc_label}")
 
-elif nav_option == "⏳ Future Price Prediction":
-    st.markdown('<div class="sec-hdr">⏳ Future Price Prediction</div>', unsafe_allow_html=True)
-    st.write("Real estate prices increase over time due to inflation and demand. See what your house will cost to build in the future!")
-    
-    years = st.slider("Select Years from Now", 1, 15, 5)
-    inflation_rate = 0.05 # 5% per year
-    
-    future_price = pred * ((1 + inflation_rate) ** years)
-    
-    st.markdown(f'''
-    <div class="price-card" style="border: 2px solid #17a2b8;">
-        <div class="price-label">✦ Estimated Cost in {years} Years</div>
-        <div class="price-value" style="color: #17a2b8;">₹{int(future_price):,}</div>
-        <div class="price-range">Assuming a {inflation_rate*100}% annual increase</div>
-    </div>
-    ''', unsafe_allow_html=True)
+
 
 elif nav_option == "🤖 Smart Recommendation":
     # ── Smart Recommendation System ────────────────────────────────────────────
