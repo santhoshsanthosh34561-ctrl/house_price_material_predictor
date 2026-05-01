@@ -502,7 +502,7 @@ st.markdown(f'<div class="chips-row">{chips_html}</div>', unsafe_allow_html=True
 
 # ── Location Map ──────────────────────────────────────────────────────────
 st.markdown('<div class="sec-hdr">📍 Property Location (Interactive)</div>', unsafe_allow_html=True)
-st.write("Click anywhere on the map to set your building location. Prices adjust automatically based on distance from the city center!")
+st.write("Click anywhere on the map OR type your location below. Prices adjust automatically based on distance from the city center!")
 
 CITY_CENTER = [13.0827, 80.2707] # Chennai center
 
@@ -511,7 +511,26 @@ if "clicked_lat" not in st.session_state:
 if "clicked_lon" not in st.session_state:
     st.session_state.clicked_lon = CITY_CENTER[1]
 
-m = folium.Map(location=CITY_CENTER, zoom_start=11)
+col_search, col_btn = st.columns([4, 1])
+with col_search:
+    search_query = st.text_input("Search Location", placeholder="e.g. Anna Nagar, Chennai", label_visibility="collapsed")
+with col_btn:
+    if st.button("🔍 Search", use_container_width=True) and search_query:
+        try:
+            from geopy.geocoders import Nominatim # type: ignore
+            geolocator = Nominatim(user_agent="santhosh_ai_app")
+            location = geolocator.geocode(search_query)
+            if location:
+                st.session_state.clicked_lat = location.latitude
+                st.session_state.clicked_lon = location.longitude
+                st.rerun()
+            else:
+                st.error("Location not found!")
+        except Exception:
+            st.error("Error searching location.")
+
+map_center = [st.session_state.clicked_lat, st.session_state.clicked_lon]
+m = folium.Map(location=map_center, zoom_start=12)
 folium.Marker(CITY_CENTER, popup="City Center", tooltip="City Center", icon=folium.Icon(color="red", icon="star")).add_to(m)
 
 if st.session_state.clicked_lat != CITY_CENTER[0] or st.session_state.clicked_lon != CITY_CENTER[1]:
