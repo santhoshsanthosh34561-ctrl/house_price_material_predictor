@@ -416,8 +416,9 @@ def load_model():
                 return pickle.load(f)
         except Exception:
             pass
+    from sklearn.linear_model import LinearRegression
     df = pd.read_csv('house_prediction.csv')
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model = LinearRegression()
     model.fit(df[FEATURE_COLS], df['price'])
     with open('house_model.pkl', 'wb') as f:
         pickle.dump(model, f)
@@ -825,9 +826,9 @@ if True:
             st.pyplot(fig_corr)
 
         elif option == "Feature Importance (ML)":
-            st.write("### 🌳 Random Forest Feature Importance")
+            st.write("### 🌳 Feature Importance")
             st.info("Shows which factors affect the house price the most.")
-            importances = model.feature_importances_
+            importances = np.abs(model.coef_)
             indices = np.argsort(importances)[::-1]
             sorted_features = [FEATURE_COLS[i] for i in indices]
             fig_feat, ax_feat = plt.subplots(figsize=(8, 4))
