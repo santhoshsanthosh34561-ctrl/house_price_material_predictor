@@ -6,3 +6,6 @@ openpyxl
 google-generativeai
 seaborn
 matplotlib
+folium
+streamlit-folium
+Pillow

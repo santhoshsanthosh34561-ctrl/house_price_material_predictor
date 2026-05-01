@@ -1,7 +1,8 @@
 import streamlit as st  # type: ignore
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
-from sklearn.linear_model import LinearRegression  # type: ignore
+from sklearn.ensemble import RandomForestRegressor  # type: ignore
+from sklearn.metrics import r2_score, mean_absolute_error  # type: ignore
 import pickle
 import os
 import time
@@ -11,6 +12,9 @@ import streamlit.components.v1 as components  # type: ignore
 from languages import LANGUAGES, LANG_LIST  # type: ignore
 import sqlite3
 import hashlib
+import folium  # type: ignore
+from streamlit_folium import st_folium  # type: ignore
+import math
 from datetime import datetime
 
 # ── Database Initialization ───────────────────────────────────────────────
@@ -413,7 +417,7 @@ def load_model():
         except Exception:
             pass
     df = pd.read_csv('house_prediction.csv')
-    model = LinearRegression()
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(df[FEATURE_COLS], df['price'])
     with open('house_model.pkl', 'wb') as f:
         pickle.dump(model, f)
@@ -452,8 +456,8 @@ def estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden, pa
             ("Water Tank", f"{bathroom*500} Litres")]},
         {"icon": "🧴", "title": "7. Plastering & Finishing", "items": [
             ("Cement", f"{int(s*0.04)} Bags"), ("Sand", f"{int(s*0.15)} CFT"),
-            ("Wall Putty", f"{int(s*0.15)} Kg"), ("Primer", f"{int(s*0.025)} Litres"),
-            ("Paint (2 coats)", f"{int(s*0.03)} Litres")]},
+            ("Wall Putty", f"{int(s*0.30)} Kg"), ("Primer", f"{int(s*0.05)} Litres"),
+            ("Paint (2 coats)", f"{int(s*0.07)} Litres")]},
         {"icon": "🟦", "title": "8. Flooring", "items": [
             ("Tiles / Marble / Granite", f"{int(s*1.05)} Sqft"),
             ("Tile Adhesive", f"{int(s*0.02)} Bags"), ("Cement (base)", f"{int(s*0.03)} Bags")]},
@@ -497,11 +501,50 @@ chips_html = " ".join(f'<span class="chip">{c}</span>' for c in chips if c)
 st.markdown(f'<div class="chips-row">{chips_html}</div>', unsafe_allow_html=True)
 
 # ── Location Map ──────────────────────────────────────────────────────────
-st.markdown('<div class="sec-hdr">📍 Property Location</div>', unsafe_allow_html=True)
-location_query = st.text_input("Enter your building location (e.g., Anna Nagar, Chennai):", "Chennai, Tamil Nadu")
-if location_query:
-    map_url = f"https://maps.google.com/maps?q={location_query.replace(' ', '%20')}&t=&z=13&ie=UTF8&iwloc=&output=embed"
-    components.html(f'<iframe width="100%" height="280" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="{map_url}"></iframe>', height=280)
+st.markdown('<div class="sec-hdr">📍 Property Location (Interactive)</div>', unsafe_allow_html=True)
+st.write("Click anywhere on the map to set your building location. Prices adjust automatically based on distance from the city center!")
+
+CITY_CENTER = [13.0827, 80.2707] # Chennai center
+
+if "clicked_lat" not in st.session_state:
+    st.session_state.clicked_lat = CITY_CENTER[0]
+if "clicked_lon" not in st.session_state:
+    st.session_state.clicked_lon = CITY_CENTER[1]
+
+m = folium.Map(location=CITY_CENTER, zoom_start=11)
+folium.Marker(CITY_CENTER, popup="City Center", tooltip="City Center", icon=folium.Icon(color="red", icon="star")).add_to(m)
+
+if st.session_state.clicked_lat != CITY_CENTER[0] or st.session_state.clicked_lon != CITY_CENTER[1]:
+    folium.Marker(
+        [st.session_state.clicked_lat, st.session_state.clicked_lon], 
+        popup="Your Plot", tooltip="Your Plot", icon=folium.Icon(color="blue", icon="home")
+    ).add_to(m)
+
+# Make map click update session state
+map_data = st_folium(m, height=350, use_container_width=True, returned_objects=["last_clicked"])
+
+if map_data and map_data.get("last_clicked"):
+    new_lat = map_data["last_clicked"]["lat"]
+    new_lon = map_data["last_clicked"]["lng"]
+    if new_lat != st.session_state.clicked_lat or new_lon != st.session_state.clicked_lon:
+        st.session_state.clicked_lat = new_lat
+        st.session_state.clicked_lon = new_lon
+        st.rerun()
+
+# Euclidean distance approx (1 degree ~ 111km)
+dist_km = math.sqrt((CITY_CENTER[0] - st.session_state.clicked_lat)**2 + (CITY_CENTER[1] - st.session_state.clicked_lon)**2) * 111
+
+if dist_km < 5:
+    loc_mult = 1.2
+    loc_label = "City Center (High Demand)"
+elif dist_km < 15:
+    loc_mult = 1.0
+    loc_label = "Suburban (Standard)"
+else:
+    loc_mult = 0.85
+    loc_label = "Rural / Outskirts (Lower Cost)"
+
+st.info(f"📍 **Distance:** {dist_km:.1f} km &nbsp;|&nbsp; **Zone:** {loc_label}")
 
 st.markdown("---")
 
@@ -512,7 +555,7 @@ if predict_clicked:
     inp = pd.DataFrame([[hall, bedroom, kitchen, sqft, floor, bathroom, garden, parking, pooja_room]], columns=FEATURE_COLS)
     base_pred = model.predict(inp)[0]
     floor_mult = 1.0 + ((floor - 1) * 0.1)
-    pred = base_pred * Q["mult"] * floor_mult
+    pred = base_pred * Q["mult"] * floor_mult * loc_mult
 
     try:
         save_prediction(st.session_state.username, sqft, bedroom, Q['label'], pred)
@@ -598,6 +641,23 @@ if predict_clicked:
             cb.markdown(f'<div class="stage-card"><div class="stage-title">{stg2["icon"]} {stg2["title"]}</div>{rows2}</div>', unsafe_allow_html=True)
 
     # ── Grand Total Table ─────────────────────────────────────────────────
+    def calculate_materials(area):
+        return {
+            "cement_bags": area * 0.4,
+            "steel_kg": area * 4,
+            "sand_cft": area * 1.3,
+            "bricks_nos": area * 8,
+            "tiles_sqft": area * 1.05,
+            "paint_litres": area * 0.07,
+            "putty_kg": area * 0.30,
+            "primer_litres": area * 0.05,
+            "tile_adhesive_bags": area / 50,
+            "centering_sqft": area * 1.2,
+            "pipes_metres": area * 0.4
+        }
+        
+    mat_calc = calculate_materials(sqft)
+
     st.markdown(f'<div class="sec-hdr">{L["grand_total"]}</div>', unsafe_allow_html=True)
     st.table(pd.DataFrame({
         L["material_col"]: [
@@ -607,10 +667,10 @@ if predict_clicked:
             "🪵 Centering Sheets", "🚿 PVC/CPVC Pipes"
         ],
         L["qty_col"]: [
-            f"{int(sqft*0.4)} Bags", f"{int(sqft*1.3)} CFT", f"{int(sqft*4)} Kg",
-            f"{int(sqft*8)} Nos", f"{int(sqft*1.05)} Sqft", f"{int(sqft*0.03)} Litres",
-            f"{int(sqft*0.15)} Kg", f"{int(sqft*0.025)} Litres", f"{int(sqft*0.02)} Bags",
-            f"{int(sqft*1.2)} Sqft", f"{int(sqft*0.4)} Metres"
+            f"{int(mat_calc['cement_bags'])} Bags", f"{int(mat_calc['sand_cft'])} CFT", f"{int(mat_calc['steel_kg'])} Kg",
+            f"{int(mat_calc['bricks_nos'])} Nos", f"{int(mat_calc['tiles_sqft'])} Sqft", f"{int(mat_calc['paint_litres'])} Litres",
+            f"{int(mat_calc['putty_kg'])} Kg", f"{int(mat_calc['primer_litres'])} Litres", f"{int(mat_calc['tile_adhesive_bags'])} Bags",
+            f"{int(mat_calc['centering_sqft'])} Sqft", f"{int(mat_calc['pipes_metres'])} Metres"
         ],
     }))
 
@@ -667,37 +727,113 @@ if predict_clicked:
         use_container_width=True,
     )
 
-# ── Data Analysis Dashboard ────────────────────────────────────────────────
+# ── Smart Recommendation System ────────────────────────────────────────────
+st.markdown("---")
+st.markdown('<div class="sec-hdr">💡 Smart Budget Planner (AI Recommender)</div>', unsafe_allow_html=True)
+st.write("Enter your total budget, and Santhosh AI will recommend the best house configurations for you!")
+
+user_budget = st.number_input("💰 Your Maximum Budget (₹)", min_value=500000, max_value=500000000, value=3000000, step=100000)
+
+if user_budget > 0:
+    # Base rates per sqft for estimation
+    rates = {"Premium": 2800, "Standard": 2300, "Budget": 1800}
+    
+    rc1, rc2, rc3 = st.columns(3)
+    
+    def get_bhk(sqft):
+        if sqft < 600: return "1 BHK"
+        elif sqft < 1100: return "2 BHK"
+        elif sqft < 1600: return "3 BHK"
+        else: return "4 BHK"
+
+    with rc1:
+        sq = int(user_budget / rates["Premium"])
+        st.markdown(f"""
+        <div class="stage-card" style="border-top: 3px solid #f7971e;">
+            <div style="color:#ffd200; font-weight:700; margin-bottom:8px;">🌟 Premium Option</div>
+            <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
+            <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Highest quality materials & finish</div>
+            <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
+            <div class="mat-row"><span>🏗️ Est. Rate:</span><span class="qty-badge">₹2800/sqft</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with rc2:
+        sq = int(user_budget / rates["Standard"])
+        st.markdown(f"""
+        <div class="stage-card" style="border-top: 3px solid #28a745;">
+            <div style="color:#28a745; font-weight:700; margin-bottom:8px;">🏢 Balanced Option</div>
+            <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
+            <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Great balance of size & quality</div>
+            <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
+            <div class="mat-row"><span>🏗️ Est. Rate:</span><span class="qty-badge">₹2300/sqft</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with rc3:
+        sq = int(user_budget / rates["Budget"])
+        st.markdown(f"""
+        <div class="stage-card" style="border-top: 3px solid #17a2b8;">
+            <div style="color:#17a2b8; font-weight:700; margin-bottom:8px;">📉 Max Size Option</div>
+            <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
+            <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Largest house with basic materials</div>
+            <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
+            <div class="mat-row"><span>🏗️ Est. Rate:</span><span class="qty-badge">₹1800/sqft</span></div>
+        </div>
+        """, unsafe_allow_html=True)
 st.markdown("---")
 st.markdown('<div class="sec-hdr">📊 Data Analysis Dashboard</div>', unsafe_allow_html=True)
 
 try:
     raw_df = pd.read_csv('house_prediction.csv')
-    t1, t2, t3, t4, t5 = st.tabs(["📈 Area vs Price", "📊 Distribution", "📦 Outliers", "🔥 Correlation", "📖 History"])
+    
+    option = st.selectbox("Choose Analysis", [
+        "Area vs Price (Scatter Plot)",
+        "Price Distribution (Histogram)",
+        "Price Outliers (Boxplot)",
+        "Correlation Heatmap",
+        "Feature Importance (ML)",
+        "Model Evaluation",
+        "Prediction History"
+    ])
 
-    with t1:
+    if option == "Area vs Price (Scatter Plot)":
         st.write("### 📈 Area (Sqft) vs Price")
-        st.line_chart(raw_df.sort_values(by="sqft").set_index("sqft")["price"])
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.scatter(raw_df['sqft'], raw_df['price'], color="#ffd200", alpha=0.6, edgecolors="#f7971e")
+        ax.set_facecolor("#111")
+        fig.patch.set_facecolor("#111")
+        ax.tick_params(colors='#aaa')
+        ax.set_xlabel("Area (sqft)", color="#aaa")
+        ax.set_ylabel("Price (₹)", color="#aaa")
+        ax.set_title("Area vs Price Relationship", color="#ffd200", fontsize=12)
+        st.pyplot(fig)
 
-    with t2:
-        fig_hist, ax_hist = plt.subplots(figsize=(8, 3))
-        sns.histplot(raw_df['price'], bins=20, kde=True, color="#f7971e", ax=ax_hist)
+    elif option == "Price Distribution (Histogram)":
+        st.write("### 📊 Price Distribution")
+        fig_hist, ax_hist = plt.subplots(figsize=(8, 4))
+        sns.histplot(raw_df['price'], bins=30, kde=True, color="#f7971e", ax=ax_hist)
         ax_hist.set_facecolor("#111")
         fig_hist.patch.set_facecolor("#111")
         ax_hist.tick_params(colors='#aaa')
-        ax_hist.set_title("Price Distribution", color="#ffd200", fontsize=12)
+        ax_hist.set_xlabel("Price (₹)", color="#aaa")
+        ax_hist.set_ylabel("Frequency", color="#aaa")
+        ax_hist.set_title("Distribution of Prices", color="#ffd200", fontsize=12)
         st.pyplot(fig_hist)
 
-    with t3:
-        fig_box, ax_box = plt.subplots(figsize=(8, 3))
+    elif option == "Price Outliers (Boxplot)":
+        st.write("### 📦 Price Outliers")
+        fig_box, ax_box = plt.subplots(figsize=(8, 4))
         sns.boxplot(x=raw_df['price'], color="#ffd200", ax=ax_box)
         ax_box.set_facecolor("#111")
         fig_box.patch.set_facecolor("#111")
         ax_box.tick_params(colors='#aaa')
+        ax_box.set_xlabel("Price (₹)", color="#aaa")
         ax_box.set_title("Price Outliers & Spread", color="#ffd200", fontsize=12)
         st.pyplot(fig_box)
 
-    with t4:
+    elif option == "Correlation Heatmap":
+        st.write("### 🔥 Feature Correlation Heatmap")
         fig_corr, ax_corr = plt.subplots(figsize=(8, 6))
         corr = raw_df[FEATURE_COLS + ['price']].corr()
         sns.heatmap(corr, annot=True, cmap="YlOrBr", fmt=".2f", linewidths=.5, ax=ax_corr)
@@ -706,7 +842,49 @@ try:
         ax_corr.set_title("Feature Correlation Heatmap", color="#ffd200", fontsize=12)
         st.pyplot(fig_corr)
 
-    with t5:
+    elif option == "Feature Importance (ML)":
+        st.write("### 🌳 Random Forest Feature Importance")
+        st.info("Shows which factors affect the house price the most.")
+        importances = model.feature_importances_
+        indices = np.argsort(importances)[::-1]
+        sorted_features = [FEATURE_COLS[i] for i in indices]
+        
+        fig_feat, ax_feat = plt.subplots(figsize=(8, 4))
+        sns.barplot(x=importances[indices], y=sorted_features, palette="YlOrBr_r", ax=ax_feat)
+        ax_feat.set_facecolor("#111")
+        fig_feat.patch.set_facecolor("#111")
+        ax_feat.tick_params(colors='#aaa')
+        ax_feat.set_xlabel("Importance Score", color="#aaa")
+        ax_feat.set_title("Which features drive the price?", color="#ffd200", fontsize=12)
+        st.pyplot(fig_feat)
+        
+    elif option == "Model Evaluation":
+        st.write("### 📊 Model Evaluation Metrics")
+        st.info("Evaluating how accurate our Random Forest model is based on the dataset.")
+        
+        X = raw_df[FEATURE_COLS]
+        y = raw_df['price']
+        y_pred = model.predict(X)
+        
+        r2 = r2_score(y, y_pred)
+        mae = mean_absolute_error(y, y_pred)
+        
+        c1, c2 = st.columns(2)
+        c1.markdown(f"""
+        <div class="stat-pill" style="margin-bottom:1rem;">
+            <div class="stat-pill-val" style="color:#28a745;">{r2*100:.1f}%</div>
+            <div class="stat-pill-lbl">R² Score (Accuracy)</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        c2.markdown(f"""
+        <div class="stat-pill">
+            <div class="stat-pill-val" style="color:#dc3545;">₹{int(mae):,}</div>
+            <div class="stat-pill-lbl">Mean Absolute Error</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    elif option == "Prediction History":
         st.write("### 📖 Your Prediction History")
         conn = sqlite3.connect('santhosh_ai.db')
         hist_df = pd.read_sql_query(
@@ -721,6 +899,47 @@ try:
 
 except Exception as e:
     st.error(f"Error loading analytics: {e}")
+
+# ── AI Image-based House Evaluator ─────────────────────────────────────────
+st.markdown("---")
+st.markdown('<div class="sec-hdr">🖼️ AI Image-based House Evaluator</div>', unsafe_allow_html=True)
+st.write("Upload a picture of a house, and our AI will analyze the exterior to estimate its construction quality, size, and approximate cost!")
+
+house_image = st.file_uploader("Upload House Image", type=["png", "jpg", "jpeg"], key="house_img")
+
+if house_image is not None:
+    from PIL import Image
+    col_img, col_res = st.columns([1, 1.2])
+    
+    with col_img:
+        st.image(house_image, caption="Uploaded House", use_container_width=True)
+        
+    with col_res:
+        if st.button("🔍 Analyze House", width="stretch", type="primary"):
+            if not st.session_state.get("gemini_api_key"):
+                st.warning("⚠️ Please enter your Gemini API Key in the sidebar to unlock AI Image Analysis.")
+            else:
+                with st.spinner("🤖 AI is scanning the house..."):
+                    try:
+                        import google.generativeai as genai # type: ignore
+                        genai.configure(api_key=st.session_state.gemini_api_key)
+                        vision_model = genai.GenerativeModel('gemini-1.5-flash')
+                        img = Image.open(house_image)
+                        
+                        vision_prompt = """
+                        You are an expert real estate and construction appraiser in India. 
+                        Look at this house and estimate:
+                        1. **Construction Quality:** (Premium / Standard / Budget) based on the exterior.
+                        2. **Floors:** How many floors does it appear to have?
+                        3. **Estimated Size:** A rough guess of the square footage.
+                        4. **Estimated Price:** A rough estimated construction price in Indian Rupees (₹).
+                        Keep the response short, highly structured, and extremely professional. Use markdown bullet points.
+                        """
+                        response = vision_model.generate_content([vision_prompt, img])
+                        st.success("✅ Analysis Complete!")
+                        st.markdown(f"<div style='background:#1a1a1a; padding:15px; border-radius:10px; border:1px solid #333;'>{response.text}</div>", unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Error during image analysis: {e}")
 
 # ── AI Chat Assistant ──────────────────────────────────────────────────────
 st.markdown("---")
