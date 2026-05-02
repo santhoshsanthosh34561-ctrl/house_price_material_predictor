@@ -351,8 +351,8 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.rerun()
 
-    # Auto-load API key from secrets — no user input needed
-    api_key = st.secrets.get("GEMINI_API_KEY", "")
+    # Auto-load API key from secrets with hardcoded fallback to fix 'Missing' error
+    api_key = st.secrets.get("GEMINI_API_KEY", "AIzaSyAig2D59gwUNK6bhcUww68aiZd2_TxelnA")
 
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">🌐 Language</div>', unsafe_allow_html=True)
@@ -427,9 +427,10 @@ model = load_model()
 # ── AI Analysis Cache ──────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
 def get_ai_analysis(img_bytes, api_key):
-    if not api_key: return "API Key Missing"
+    # Fallback to hardcoded key if empty
+    key = api_key if api_key else "AIzaSyAig2D59gwUNK6bhcUww68aiZd2_TxelnA"
     try:
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=key)
         # Use 1.5-flash-8b for the absolute lowest latency
         model = genai.GenerativeModel(
             "gemini-1.5-flash-8b",
