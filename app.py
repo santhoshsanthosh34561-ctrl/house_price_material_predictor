@@ -353,9 +353,12 @@ with st.sidebar:
     st.markdown('<div class="sidebar-section-title">API Settings</div>', unsafe_allow_html=True)
     # Check for API key in secrets first
     default_key = st.secrets.get("GEMINI_API_KEY", "")
-    api_key = st.text_input("Enter Gemini API Key", type="password",
-                            value=default_key,
-                            key="gemini_api_key", help="Get free key at g.co/aistudio")
+    sidebar_api_key = st.text_input("Enter Gemini API Key", type="password",
+                                    value=default_key,
+                                    key="gemini_api_key", help="Get free key at g.co/aistudio")
+
+    # Master API Key logic (combines sidebar and inline inputs)
+    api_key = sidebar_api_key or st.session_state.get("inline_api_vision") or st.session_state.get("inline_api_chat")
 
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">🌐 Language</div>', unsafe_allow_html=True)
@@ -892,9 +895,8 @@ if True:
             if st.button("🔍 Analyze House", width="stretch", type="primary"):
                 if not api_key:
                     st.warning("Please enter your Gemini API key below or in the sidebar:")
-                    api_key = st.text_input("Enter Gemini API Key", type="password", key="inline_api_vision")
-                    if api_key:
-                        st.session_state.gemini_api_key = api_key
+                    st.text_input("Enter Gemini API Key", type="password", key="inline_api_vision")
+                    if st.session_state.get("inline_api_vision"):
                         st.rerun()
                 else:
                     with st.spinner("🤖 AI is scanning the house..."):
@@ -925,9 +927,8 @@ if True:
     st.markdown(f'<div class="sec-hdr">🤖 {L.get("ai_chat", "Santhosh AI Assistant")}</div>', unsafe_allow_html=True)
     if not api_key:
         with st.expander("🔑 Click here to enter Gemini API Key for Real AI responses", expanded=True):
-            api_key = st.text_input("Enter Gemini API Key", type="password", key="inline_api_chat")
-            if api_key:
-                st.session_state.gemini_api_key = api_key
+            st.text_input("Enter Gemini API Key", type="password", key="inline_api_chat")
+            if st.session_state.get("inline_api_chat"):
                 st.rerun()
         st.info("💡 Real AI responses in Tamil are currently disabled. Using basic automated replies.")
 
