@@ -385,7 +385,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"])
 
     st.markdown("---")
-    st.markdown('<div class="sidebar-section-title">🔑 Settings</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section-title">API Settings</div>', unsafe_allow_html=True)
     # Check for API key in secrets first
     default_key = st.secrets.get("GEMINI_API_KEY", "")
     api_key = st.text_input("Enter Gemini API Key", type="password",
@@ -891,7 +891,7 @@ if True:
         with col_res:
             if st.button("🔍 Analyze House", width="stretch", type="primary"):
                 if not api_key:
-                    st.warning("⚠️ Please enter your Gemini API key in the sidebar")
+                    st.warning("Please enter your Gemini API key in the sidebar")
                 else:
                     with st.spinner("🤖 AI is scanning the house..."):
                         try:
