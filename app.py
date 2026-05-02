@@ -361,7 +361,7 @@ with st.sidebar:
     sqft = st.number_input(f"📐 {L['sqft']}", min_value=300, max_value=1000000, value=1200, step=50)
 
     Q_LEVELS = {
-        "Low":    {"mult": 0.78260869565, "label": "📉 Budget  ₹1800/sqft"},
+        "Low":    {"mult": 0.78260869565, "label": "📉 Basic  ₹1800/sqft"},
         "Medium": {"mult": 1.0,           "label": "🏢 Standard  ₹2300/sqft"},
         "High":   {"mult": 1.30434782609, "label": "✨ Premium  ₹3000/sqft"},
     }
@@ -733,7 +733,7 @@ if True:
     user_budget = st.number_input("💰 Your Maximum Budget (₹)", min_value=500000, max_value=500000000, value=3000000, step=100000)
 
     if user_budget > 0:
-        rates = {"Premium": 3000, "Standard": 2300, "Budget": 1800}
+        rates = {"Premium": 3000, "Standard": 2300, "Basic": 1800}
         rc1, rc2, rc3 = st.columns(3)
         def get_bhk(s):
             if s < 600: return "1 BHK"
@@ -755,17 +755,17 @@ if True:
             sq = int(user_budget / rates["Standard"])
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #28a745;">
-                <div style="color:#28a745; font-weight:700; margin-bottom:8px;">🏢 Balanced Option</div>
+                <div style="color:#28a745; font-weight:700; margin-bottom:8px;">🏢 Standard Option</div>
                 <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
                 <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Great balance of size</div>
                 <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
             </div>''', unsafe_allow_html=True)
 
         with rc3:
-            sq = int(user_budget / rates["Budget"])
+            sq = int(user_budget / rates["Basic"])
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #17a2b8;">
-                <div style="color:#17a2b8; font-weight:700; margin-bottom:8px;">📉 Max Size Option</div>
+                <div style="color:#17a2b8; font-weight:700; margin-bottom:8px;">📉 Basic Option</div>
                 <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
                 <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Largest house</div>
                 <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
