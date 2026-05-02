@@ -16,6 +16,8 @@ import folium  # type: ignore
 from streamlit_folium import st_folium  # type: ignore
 import math
 from datetime import datetime
+import google.generativeai as genai  # type: ignore
+from PIL import Image # type: ignore
 
 # ── Database Initialization ───────────────────────────────────────────────
 def init_db():
@@ -421,6 +423,27 @@ def load_model():
     return model
 
 model = load_model()
+
+# ── AI Analysis Cache ──────────────────────────────────────────────────────
+@st.cache_data(show_spinner=False)
+def get_ai_analysis(img_bytes, api_key):
+    if not api_key: return "API Key Missing"
+    try:
+        genai.configure(api_key=api_key)
+        # Use 1.5-flash-8b for the absolute lowest latency
+        model = genai.GenerativeModel(
+            "gemini-1.5-flash-8b",
+            generation_config={"max_output_tokens": 150, "temperature": 0.1}
+        )
+        import io
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        img.thumbnail((320, 320))
+        
+        prompt = "House analysis (Brief English+Tamil). Quality, Floors, Size, Cost (₹)."
+        response = model.generate_content([prompt, img])
+        return response.text
+    except Exception as e:
+        return f"Error: {e}"
 
 # ── Material estimation ────────────────────────────────────────────────────
 def estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden_area, parking, pooja_room, quality_key):
@@ -877,41 +900,27 @@ if True:
     house_image = st.file_uploader("Upload House Image", type=["png", "jpg", "jpeg"], key="house_img")
 
     if house_image is not None:
-        from PIL import Image
-        import google.generativeai as genai  # type: ignore
         col_img, col_res = st.columns([1, 1.2])
 
         with col_img:
             st.image(house_image, caption="Uploaded House", use_container_width=True)
 
         with col_res:
-            if st.button("🔍 Analyze House", width="stretch", type="primary"):
-                with st.spinner("⚡ Scanning..."):
-                    try:
-                        genai.configure(api_key=api_key)
-                        vision_model = genai.GenerativeModel(
-                            "gemini-2.0-flash",
-                            generation_config={"max_output_tokens": 300, "temperature": 0.3}
-                        )
-                        img = Image.open(house_image).convert("RGB")
-                        img.thumbnail((512, 512))  # resize for speed
-
-                        vision_prompt = (
-                            "Analyze this house image. Reply in English + Tamil (தமிழ்). "
-                            "Be brief and structured:\n"
-                            "1. Construction Quality\n2. Floors\n"
-                            "3. Estimated Size\n4. Estimated Cost (₹)"
-                        )
-                        response = vision_model.generate_content([vision_prompt, img])
-                        st.success("✅ Analysis Complete!")
+            if st.button("⚡ Fast Scan", width="stretch", type="primary"):
+                with st.spinner("⚡ Processing..."):
+                    img_bytes = house_image.getvalue()
+                    analysis_text = get_ai_analysis(img_bytes, api_key)
+                    
+                    if "Error" in analysis_text:
+                        st.error(analysis_text)
+                    else:
+                        st.success("✅ Done!")
                         st.markdown(
                             f"<div style='background:#1a1a1a;padding:15px;"
                             f"border-radius:10px;border:1px solid #333;'>"
-                            f"{response.text}</div>",
+                            f"{analysis_text}</div>",
                             unsafe_allow_html=True
                         )
-                    except Exception as e:
-                        st.error(f"Error: {e}")
 
 if True:
     st.markdown(f'<div class="sec-hdr">🤖 {L.get("ai_chat", "Santhosh AI Assistant")}</div>', unsafe_allow_html=True)
