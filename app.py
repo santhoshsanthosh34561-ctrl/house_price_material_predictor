@@ -451,11 +451,10 @@ def get_ai_analysis(img_bytes, api_key):
         img.thumbnail((320, 320))
         
         prompt = (
-            "Analyze this house image. You must output exactly these three points in English and Tamil (தமிழ்):\n"
-            "1. Construction Quality (கட்டுமான தரம்)\n"
-            "2. Estimated Size (தோராயமான பரப்பு/அளவு)\n"
-            "3. Approximate Cost (தோராயமான கட்டுமான விலை/சந்தை விலை ₹)\n\n"
-            "Provide a professional and accurate estimate based on visual cues."
+            "Analyze this house image. You MUST return exactly 3 lines, nothing else:\n"
+            "Quality: [Low/Medium/High/Premium] + Brief Tamil description\n"
+            "Size: [Estimated Sqft] + Brief Tamil description\n"
+            "Cost: [Estimated ₹ Amount] + Brief Tamil description\n"
         )
         response = model.generate_content([prompt, img])
         return response.text
@@ -936,19 +935,28 @@ if True:
                         st.session_state.last_ai_error = analysis_text
                     else:
                         st.success("✅ Analysis Complete!")
-                        st.markdown(
-                            f"""
-                            <div style='background: linear-gradient(135deg, #1a1a1a 0%, #222 100%); 
-                                        padding: 20px; border-radius: 15px; border: 1px solid #ffd20044; 
-                                        box-shadow: 0 10px 30px rgba(0,0,0,0.5);'>
-                                <h3 style='color: #ffd200; margin-top: 0;'>📋 AI Analysis Report</h3>
-                                <div style='color: #eee; line-height: 1.6; font-size: 1.1rem;'>
-                                    {analysis_text.replace("\n", "<br>")}
-                                </div>
+                        # Parse lines
+                        lines = [l.split(":", 1)[1].strip() if ":" in l else l for l in analysis_text.split("\n") if l.strip()]
+                        q_val = lines[0] if len(lines) > 0 else "N/A"
+                        s_val = lines[1] if len(lines) > 1 else "N/A"
+                        c_val = lines[2] if len(lines) > 2 else "N/A"
+
+                        st.markdown(f"""
+                        <div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 10px;'>
+                            <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #ffd200; text-align: center;'>
+                                <div style='color: #888; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;'>🏗️ Quality</div>
+                                <div style='color: #fff; font-weight: 700; font-size: 1rem; margin-top: 5px;'>{q_val}</div>
                             </div>
-                            """, 
-                            unsafe_allow_html=True
-                        )
+                            <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #28a745; text-align: center;'>
+                                <div style='color: #888; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;'>📐 Size</div>
+                                <div style='color: #fff; font-weight: 700; font-size: 1rem; margin-top: 5px;'>{s_val}</div>
+                            </div>
+                            <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #f7971e; text-align: center;'>
+                                <div style='color: #888; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;'>💰 Cost</div>
+                                <div style='color: #fff; font-weight: 700; font-size: 1rem; margin-top: 5px;'>{c_val}</div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
 
 if True:
     st.markdown(f'<div class="sec-hdr">🤖 {L.get("ai_chat", "Santhosh AI Assistant")}</div>', unsafe_allow_html=True)
