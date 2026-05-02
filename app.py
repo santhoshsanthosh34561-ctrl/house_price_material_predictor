@@ -385,8 +385,10 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"])
 
     st.markdown("---")
-    st.markdown('<div class="sidebar-section-title">🤖 AI Chat Key</div>', unsafe_allow_html=True)
+    # Check for API key in secrets first
+    default_key = st.secrets.get("GEMINI_API_KEY", "")
     api_key = st.text_input("Gemini API Key (optional)", type="password",
+                            value=default_key,
                             key="gemini_api_key", help="Get free key at g.co/aistudio")
 
 # Dataset upload handler
@@ -916,7 +918,7 @@ if True:
                             st.error(f"Error during image analysis: {e}")
 
 if True:
-    st.markdown(f'<div class="sec-hdr">🤖 {{L.get("ai_chat", "Santhosh AI Assistant")}}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="sec-hdr">🤖 {L.get("ai_chat", "Santhosh AI Assistant")}</div>', unsafe_allow_html=True)
     st.info("💡 Enter your Gemini API key in the sidebar to enable real AI responses in Tamil.")
 
     if "messages" not in st.session_state:
