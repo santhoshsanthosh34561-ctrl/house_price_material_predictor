@@ -952,7 +952,7 @@ if True:
                 try:
                     import google.generativeai as genai  # type: ignore
                     genai.configure(api_key=api_key)
-                    model_ai = genai.GenerativeModel('gemini-pro')
+                    model_ai = genai.GenerativeModel('gemini-1.5-flash')
                     convo_prompt = (
                         f"You are Santhosh AI, a friendly construction and real estate AI assistant. "
                         f"You MUST answer ONLY in Tamil. User asks: {prompt}"
