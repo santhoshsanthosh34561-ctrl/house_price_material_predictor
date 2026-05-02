@@ -441,9 +441,9 @@ def get_ai_analysis(img_bytes, api_key):
     try:
         if not api_key: return "ERROR: API Key is missing."
         genai.configure(api_key=api_key)
-        # Use 1.5-flash-8b for the absolute lowest latency
+        # Use standard 1.5-flash for maximum compatibility and stability
         model = genai.GenerativeModel(
-            "gemini-1.5-flash-8b",
+            "gemini-1.5-flash",
             generation_config={"max_output_tokens": 150, "temperature": 0.1}
         )
         import io
