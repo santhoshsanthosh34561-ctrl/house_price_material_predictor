@@ -355,15 +355,15 @@ with st.sidebar:
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">🔑 API Settings</div>', unsafe_allow_html=True)
     
-    # Check secrets first
-    default_key = st.secrets.get("GEMINI_API_KEY", "AIzaSyAmbvrZ9w1tNLVPcLrh-v-o8XIQ2V2P09c")
+    # Check secrets first (will work locally or if set in Streamlit Cloud)
+    default_key = st.secrets.get("GEMINI_API_KEY", "")
     
-    # Allow user to override if expired
+    # Allow user to override or provide a new key
     user_api_key = st.text_input("Gemini API Key", value=default_key, type="password", help="Get a free key at aistudio.google.com")
     api_key = user_api_key if user_api_key else default_key
     
-    if "400" in st.session_state.get("last_ai_error", ""):
-        st.error("⚠️ Your API Key is EXPIRED. Please get a new one at [aistudio.google.com](https://aistudio.google.com) and paste it above.")
+    if st.session_state.get("last_ai_error") and "403" in st.session_state.get("last_ai_error", ""):
+        st.error("⚠️ API Key Leaked/Disabled. Please generate a NEW one at [aistudio.google.com](https://aistudio.google.com) and paste it above.")
 
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">🌐 Language</div>', unsafe_allow_html=True)
@@ -439,7 +439,7 @@ model = load_model()
 @st.cache_data(show_spinner=False)
 def get_ai_analysis(img_bytes, api_key):
     try:
-        if not api_key: return "ERROR: API Key is missing."
+        if not api_key: return "ERROR: API Key is missing. Please add it in the sidebar."
         genai.configure(api_key=api_key)
         # Use the latest flash model alias for guaranteed availability and speed
         model = genai.GenerativeModel(
@@ -460,8 +460,10 @@ def get_ai_analysis(img_bytes, api_key):
         return response.text
     except Exception as e:
         err = str(e)
+        if "403" in err:
+            return "ERROR: API Key Leaked or Disabled. Please use a new key."
         if "400" in err or "expired" in err.lower() or "invalid" in err.lower():
-            return "ERROR: API Key Expired or Invalid. Please get a new key from aistudio.google.com"
+            return "ERROR: API Key Expired or Invalid."
         return f"ERROR: {err}"
 
 # ── Material estimation ────────────────────────────────────────────────────
