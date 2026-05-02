@@ -450,7 +450,15 @@ def get_ai_analysis(img_bytes, api_key):
         img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
         img.thumbnail((320, 320))
         
-        prompt = "House analysis (Brief English+Tamil). Quality, Floors, Size, Cost (₹)."
+        prompt = (
+            "You are an expert civil engineer. Analyze this house image and provide a detailed report in BOTH Tamil and English. "
+            "Format the output as follows:\n"
+            "1. Construction Quality (கட்டுமான தரம்)\n"
+            "2. Total Floors (தளங்கள்)\n"
+            "3. Estimated Area (தோராயமான பரப்பு)\n"
+            "4. Approximate Market Price (சந்தை விலை ₹)\n\n"
+            "Keep it professional and helpful."
+        )
         response = model.generate_content([prompt, img])
         return response.text
     except Exception as e:
@@ -929,11 +937,18 @@ if True:
                         st.error(analysis_text)
                         st.session_state.last_ai_error = analysis_text
                     else:
-                        st.success("✅ Done!")
+                        st.success("✅ Analysis Complete!")
                         st.markdown(
-                            f"<div style='background:#1a1a1a;padding:15px;"
-                            f"border-radius:10px;border:1px solid #333;'>"
-                            f"{analysis_text}</div>",
+                            f"""
+                            <div style='background: linear-gradient(135deg, #1a1a1a 0%, #222 100%); 
+                                        padding: 20px; border-radius: 15px; border: 1px solid #ffd20044; 
+                                        box-shadow: 0 10px 30px rgba(0,0,0,0.5);'>
+                                <h3 style='color: #ffd200; margin-top: 0;'>📋 AI Analysis Report</h3>
+                                <div style='color: #eee; line-height: 1.6; font-size: 1.1rem;'>
+                                    {analysis_text.replace("\n", "<br>")}
+                                </div>
+                            </div>
+                            """, 
                             unsafe_allow_html=True
                         )
 
