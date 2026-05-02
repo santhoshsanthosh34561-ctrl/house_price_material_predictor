@@ -890,13 +890,13 @@ if True:
             
         with col_res:
             if st.button("🔍 Analyze House", width="stretch", type="primary"):
-                if not st.session_state.get("gemini_api_key"):
-                    st.warning("⚠️ Please enter your [Gemini API Key](https://aistudio.google.com/app/apikey) in the sidebar to unlock AI Image Analysis & Tamil Chat.")
+                if not api_key:
+                    st.warning("⚠️ Please enter your Gemini API key in the sidebar")
                 else:
                     with st.spinner("🤖 AI is scanning the house..."):
                         try:
                             import google.generativeai as genai # type: ignore
-                            genai.configure(api_key=st.session_state.gemini_api_key)
+                            genai.configure(api_key=api_key)
                             vision_model = genai.GenerativeModel('gemini-1.5-flash')
                             img = Image.open(house_image)
                             
@@ -919,7 +919,8 @@ if True:
 
 if True:
     st.markdown(f'<div class="sec-hdr">🤖 {L.get("ai_chat", "Santhosh AI Assistant")}</div>', unsafe_allow_html=True)
-    st.info("💡 Enter your Gemini API key in the sidebar to enable real AI responses in Tamil.")
+    if not api_key:
+        st.info("💡 Enter your Gemini API key in the sidebar to enable real AI responses in Tamil.")
 
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": L.get("ai_welcome", "வணக்கம்! நான் Santhosh AI. வீட்டு கட்டுமானம் குறித்து எந்த கேள்வியும் கேளுங்கள்!")}]
@@ -937,10 +938,10 @@ if True:
             placeholder = st.empty()
             full_response = ""
 
-            if st.session_state.get("gemini_api_key"):
+            if api_key:
                 try:
                     import google.generativeai as genai  # type: ignore
-                    genai.configure(api_key=st.session_state.gemini_api_key)
+                    genai.configure(api_key=api_key)
                     model_ai = genai.GenerativeModel('gemini-pro')
                     convo_prompt = (
                         f"You are Santhosh AI, a friendly construction and real estate AI assistant. "
