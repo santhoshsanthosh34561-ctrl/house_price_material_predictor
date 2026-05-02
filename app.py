@@ -891,7 +891,11 @@ if True:
         with col_res:
             if st.button("🔍 Analyze House", width="stretch", type="primary"):
                 if not api_key:
-                    st.warning("Please enter your Gemini API key in the sidebar")
+                    st.warning("Please enter your Gemini API key below or in the sidebar:")
+                    api_key = st.text_input("Enter Gemini API Key", type="password", key="inline_api_vision")
+                    if api_key:
+                        st.session_state.gemini_api_key = api_key
+                        st.rerun()
                 else:
                     with st.spinner("🤖 AI is scanning the house..."):
                         try:
@@ -920,7 +924,12 @@ if True:
 if True:
     st.markdown(f'<div class="sec-hdr">🤖 {L.get("ai_chat", "Santhosh AI Assistant")}</div>', unsafe_allow_html=True)
     if not api_key:
-        st.info("💡 Enter your Gemini API key in the sidebar to enable real AI responses in Tamil.")
+        with st.expander("🔑 Click here to enter Gemini API Key for Real AI responses", expanded=True):
+            api_key = st.text_input("Enter Gemini API Key", type="password", key="inline_api_chat")
+            if api_key:
+                st.session_state.gemini_api_key = api_key
+                st.rerun()
+        st.info("💡 Real AI responses in Tamil are currently disabled. Using basic automated replies.")
 
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": L.get("ai_welcome", "வணக்கம்! நான் Santhosh AI. வீட்டு கட்டுமானம் குறித்து எந்த கேள்வியும் கேளுங்கள்!")}]
