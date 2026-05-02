@@ -441,9 +441,9 @@ def get_ai_analysis(img_bytes, api_key):
     try:
         if not api_key: return "ERROR: API Key is missing."
         genai.configure(api_key=api_key)
-        # Use standard 1.5-flash for maximum compatibility and stability
+        # Use the latest flash model alias for guaranteed availability and speed
         model = genai.GenerativeModel(
-            "gemini-1.5-flash",
+            "gemini-flash-latest",
             generation_config={"max_output_tokens": 150, "temperature": 0.1}
         )
         import io
@@ -960,7 +960,7 @@ if True:
                 try:
                     import google.generativeai as genai  # type: ignore
                     genai.configure(api_key=api_key)
-                    model_ai = genai.GenerativeModel('gemini-1.5-flash')
+                    model_ai = genai.GenerativeModel('gemini-flash-latest')
                     convo_prompt = (
                         f"You are Santhosh AI, a friendly construction and real estate AI assistant. "
                         f"You MUST answer ONLY in Tamil. User asks: {prompt}"
