@@ -358,12 +358,12 @@ with st.sidebar:
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">📐 House Details</div>', unsafe_allow_html=True)
 
-    sqft = st.number_input(f"📐 {L['sqft']}", min_value=300, max_value=10000, value=1200, step=50)
+    sqft = st.number_input(f"📐 {L['sqft']}", min_value=300, max_value=1000000, value=1200, step=50)
 
     Q_LEVELS = {
         "Low":    {"mult": 0.78260869565, "label": "📉 Budget  ₹1800/sqft"},
         "Medium": {"mult": 1.0,           "label": "🏢 Standard  ₹2300/sqft"},
-        "High":   {"mult": 1.21739130435, "label": "✨ Premium  ₹2800/sqft"},
+        "High":   {"mult": 1.30434782609, "label": "✨ Premium  ₹3000/sqft"},
     }
     quality_key = st.select_slider("🏗️ Construction Quality", options=["Low", "Medium", "High"], value="Medium")
     Q = Q_LEVELS[quality_key]
@@ -733,7 +733,7 @@ if True:
     user_budget = st.number_input("💰 Your Maximum Budget (₹)", min_value=500000, max_value=500000000, value=3000000, step=100000)
 
     if user_budget > 0:
-        rates = {"Premium": 2800, "Standard": 2300, "Budget": 1800}
+        rates = {"Premium": 3000, "Standard": 2300, "Budget": 1800}
         rc1, rc2, rc3 = st.columns(3)
         def get_bhk(s):
             if s < 600: return "1 BHK"
@@ -770,6 +770,23 @@ if True:
                 <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Largest house</div>
                 <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
             </div>''', unsafe_allow_html=True)
+
+        st.markdown("### 📊 Cost Reference Table")
+        st.markdown("""
+        | Area (sqft) | Basic (₹1800) | Standard (₹2300) | Premium (₹3000) |
+        | :--- | :--- | :--- | :--- |
+        | **400** | ₹7.2 L | ₹9.2 L | ₹12 L |
+        | **600** | ₹10.8 L | ₹13.8 L | ₹18 L |
+        | **800** | ₹14.4 L | ₹18.4 L | ₹24 L |
+        | **1000** | ₹18 L | ₹23 L | ₹30 L |
+        | **1200** | ₹21.6 L | ₹27.6 L | ₹36 L |
+        | **1500** | ₹27 L | ₹34.5 L | ₹45 L |
+        | **2000** | ₹36 L | ₹46 L | ₹60 L |
+        | **5000** | ₹90 L | ₹1.15 Cr | ₹1.5 Cr |
+        | **10000** | ₹1.8 Cr | ₹2.3 Cr | ₹3 Cr |
+        | **50000** | ₹9 Cr | ₹11.5 Cr | ₹15 Cr |
+        | **100000** | ₹18 Cr | ₹23 Cr | ₹30 Cr |
+        """)
 
 if True:
     st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 4: 📊 EDA & Data Analysis Dashboard</div>', unsafe_allow_html=True)
