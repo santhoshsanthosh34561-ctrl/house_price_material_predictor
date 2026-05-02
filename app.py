@@ -378,9 +378,7 @@ with st.sidebar:
     st.markdown('<div class="sidebar-section-title">🏢 Structure</div>', unsafe_allow_html=True)
     floor   = st.selectbox(f"🏢 {L['floors']}",  [1, 2, 3, 4, 5], index=0)
     parking = st.selectbox(f"🚗 {L['parking']}", [0, 1, 2, 3, 4], index=1)
-    garden  = st.radio(f"🌿 {L['garden']}", [0, 1],
-                       format_func=lambda x: L["yes"] if x else L["no"],
-                       horizontal=True)
+    garden_area = st.number_input(f"🌿 {L['garden']}", min_value=0, max_value=5000, value=0, step=50)
 
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">📁 Dataset</div>', unsafe_allow_html=True)
@@ -392,14 +390,14 @@ with st.sidebar:
                             key="gemini_api_key", help="Get free key at g.co/aistudio")
 
 # Dataset upload handler
-FEATURE_COLS = ['hall', 'bedroom', 'kitchen', 'sqft', 'floor', 'bathroom', 'garden', 'parking', 'pooja_room']
+FEATURE_COLS = ['hall', 'bedroom', 'kitchen', 'sqft', 'floor', 'bathroom', 'garden_area', 'parking', 'pooja_room']
 if uploaded_file is not None:
     try:
         new_df = pd.read_csv(uploaded_file)
         if all(col in new_df.columns for col in FEATURE_COLS + ['price']):
             new_df.to_csv("house_prediction.csv", index=False)
-            if os.path.exists("house_model_v5.pkl"):
-                os.remove("house_model_v5.pkl")
+            if os.path.exists("house_model_v6.pkl"):
+                os.remove("house_model_v6.pkl")
             st.cache_resource.clear()
             st.sidebar.success("✅ Dataset Updated! Model Retrained!")
         else:
@@ -410,9 +408,9 @@ if uploaded_file is not None:
 # ── Model ─────────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    if os.path.exists('house_model_v5.pkl'):
+    if os.path.exists('house_model_v6.pkl'):
         try:
-            with open('house_model_v5.pkl', 'rb') as f:
+            with open('house_model_v6.pkl', 'rb') as f:
                 return pickle.load(f)
         except Exception:
             pass
@@ -420,14 +418,14 @@ def load_model():
     df = pd.read_csv('house_prediction.csv')
     model = LinearRegression()
     model.fit(df[FEATURE_COLS], df['price'])
-    with open('house_model_v5.pkl', 'wb') as f:
+    with open('house_model_v6.pkl', 'wb') as f:
         pickle.dump(model, f)
     return model
 
 model = load_model()
 
 # ── Material estimation ────────────────────────────────────────────────────
-def estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden, parking, pooja_room, quality_key):
+def estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden_area, parking, pooja_room, quality_key):
     s = sqft
     stages = [
         {"icon": "🧱", "title": "1. Foundation", "items": [
@@ -470,8 +468,12 @@ def estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden, pa
         stages.append({"icon": "🛕", "title": "10. Pooja Room", "items": [
             ("Marble / Tiles", f"{25*pooja_room} Sqft"), ("Wooden Door", f"{pooja_room} Nos"),
             ("Shelves", f"{3*pooja_room} Nos"), ("Lighting", f"{2*pooja_room} Nos")]})
+    if garden_area > 0:
+        stages.append({"icon": "🌿", "title": "11. Garden & Landscaping", "items": [
+            ("Soil / Manure", f"{int(garden_area*0.5)} CFT"), ("Plants / Grass", f"{int(garden_area)} Nos/Sqft"),
+            ("Watering System", "1 Set"), ("Garden Tiles", f"{int(garden_area*0.2)} Sqft")]})
     if parking > 0:
-        stages.append({"icon": "🚗", "title": "11. Parking & Outside", "items": [
+        stages.append({"icon": "🚗", "title": "12. Parking & Outside", "items": [
             ("Paver Blocks", f"{parking*180} Sqft"), ("Iron/Steel Gate", "1 Nos"),
             ("Compound Wall", f"{int((s**.5)*4*.5)} Sqft")]})
     return stages
@@ -501,7 +503,7 @@ if dist_km < 5: loc_mult, loc_label = 1.2, "City Center (High Demand)"
 elif dist_km < 15: loc_mult, loc_label = 1.0, "Suburban (Standard)"
 else: loc_mult, loc_label = 0.85, "Rural / Outskirts (Lower Cost)"
 
-inp = pd.DataFrame([[hall, bedroom, kitchen, sqft, floor, bathroom, garden, parking, pooja_room]], columns=FEATURE_COLS)
+inp = pd.DataFrame([[hall, bedroom, kitchen, sqft, floor, bathroom, garden_area, parking, pooja_room]], columns=FEATURE_COLS)
 base_pred = model.predict(inp)[0]
 pred = base_pred * Q["mult"] * loc_mult
 
@@ -516,9 +518,10 @@ if True:
         f"📐 {sqft} sqft", f"🏗️ {quality_key}", f"🛏️ {bedroom} Bed",
         f"🛋️ {hall} Hall", f"🍳 {kitchen} Kitchen", f"🏢 {floor} Floor",
         f"🚿 {bathroom} Bath", f"🚗 {parking} Park",
-        "🌿 Garden" if garden else "🚫 No Garden",
+        "🌿 Garden" if garden_area > 0 else "🚫 No Garden",
         f"🪔 {pooja_room} Pooja" if pooja_room else "",
     ]
+    if garden_area > 0: chips[8] = f"🌿 {garden_area} sqft Garden"
     chips_html = " ".join(f'<span class="chip">{c}</span>' for c in chips if c)
     st.markdown(f'<div class="chips-row">{chips_html}</div>', unsafe_allow_html=True)
     
@@ -584,7 +587,7 @@ if True:
     st.markdown(f'<div class="sec-hdr">{{L["material_header"]}}</div>', unsafe_allow_html=True)
     st.info(L["material_info"])
 
-    est_stages = estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden, parking, pooja_room, quality_key)
+    est_stages = estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden_area, parking, pooja_room, quality_key)
     for i in range(0, len(est_stages), 2):
         ca, cb = st.columns(2)
         stg1 = est_stages[i]
@@ -652,7 +655,7 @@ if True:
         style_header(ws1, 3, 2)
         details = [("Total Area", f"{sqft} sqft"), ("Halls", hall), ("Bedrooms", bedroom),
                    ("Kitchens", kitchen), ("Floors", floor), ("Bathrooms", bathroom),
-                   ("Parking", parking), ("Garden", "Yes" if garden else "No"), ("Pooja", pooja_room)]
+                   ("Parking", parking), ("Garden Area", f"{garden_area} sqft"), ("Pooja", pooja_room)]
         for n, v in details:
             ws1.append([n, v, ""])
         ws1.append([])
