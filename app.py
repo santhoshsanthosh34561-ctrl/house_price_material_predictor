@@ -941,10 +941,20 @@ if True:
                         st.session_state.last_ai_error = analysis_text
                     else:
                         st.success("✅ Analysis Complete!")
-                        # Parse lines
-                        lines = [l.split(":", 1)[1].strip() if ":" in l else l for l in analysis_text.split("\n") if l.strip()]
-                        q_val = lines[0] if len(lines) > 0 else "N/A"
-                        c_val = lines[1] if len(lines) > 1 else "N/A"
+                        # Robust Parsing
+                        q_val, c_val = "N/A", "N/A"
+                        for line in analysis_text.split("\n"):
+                            lower_line = line.lower()
+                            if "quality" in lower_line or "தரம்" in lower_line:
+                                q_val = line.split(":", 1)[1].strip() if ":" in line else line
+                            elif "cost" in lower_line or "விலை" in lower_line:
+                                c_val = line.split(":", 1)[1].strip() if ":" in line else line
+                        
+                        # Fallback if parsing failed
+                        if q_val == "N/A" and c_val == "N/A":
+                            q_val = "See Below"
+                            c_val = "Analyzed"
+                            st.info(analysis_text)
 
                         st.markdown(f"""
                         <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;'>
