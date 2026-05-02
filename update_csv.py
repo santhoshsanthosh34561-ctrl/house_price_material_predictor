@@ -7,23 +7,24 @@ df = pd.read_csv('house_prediction.csv')
 # Base Rate is 2300 per sqft
 base_rate = 2300
 
-# Update the price column using the user's NEW formula
-# Price = (Sqft × Rate) + (Bedroom × 30000) + (Bathroom × 20000) + (Parking × 30000) + (Garden × 80000) + (Floor × 150000)
+# Update the price column using the user's NEW fixed formula
+# Price = (Sqft × Rate) + (Hall × 80000) + (Bedroom × 120000) + (Kitchen × 100000) + (Bathroom × 60000) + (Floor × 200000) + (Parking × 100000) + (Garden × 150000) + (PoojaRoom × 50000)
 df['price'] = (df['sqft'] * base_rate) + \
-              (df['bedroom'] * 30000) + \
-              (df['bathroom'] * 20000) + \
-              (df['parking'] * 30000) + \
-              (df['garden'] * 80000) + \
-              ((df['floor'] - 1) * 150000)
-
-# Note: Hall, Kitchen, and Pooja Room are no longer in the price formula as per latest request.
+              (df['hall'] * 80000) + \
+              (df['bedroom'] * 120000) + \
+              (df['kitchen'] * 100000) + \
+              (df['bathroom'] * 60000) + \
+              (df['floor'] * 200000) + \
+              (df['parking'] * 100000) + \
+              (df['garden'] * 150000) + \
+              (df['pooja_room'] * 50000)
 
 # Save the updated dataset
 df.to_csv('house_prediction.csv', index=False)
 print("Dataset updated successfully with latest pricing model!")
 
-# Remove the cached model so it retrains with the new data
-# Renaming to v4 to ensure cache clear
-if os.path.exists("house_model_v3.pkl"):
-    os.remove("house_model_v3.pkl")
-print("Deleted old model so it can be retrained.")
+# Remove old models to ensure retrain
+for v in range(1, 6):
+    if os.path.exists(f"house_model_v{v}.pkl"):
+        os.remove(f"house_model_v{v}.pkl")
+print("Deleted old models so they can be retrained.")
