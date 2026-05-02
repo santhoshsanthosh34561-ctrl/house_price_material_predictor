@@ -454,11 +454,10 @@ def get_ai_analysis(img_bytes, api_key):
         
         prompt = (
             "You are a professional building estimator. Analyze this house image. "
-            "Context: Current construction rates are: Basic ₹1800/sqft, Standard ₹2300/sqft, Premium ₹3000/sqft. "
-            "Consider floors, exterior luxury, and structural complexity. "
-            "You MUST return exactly 2 lines, nothing else:\n"
-            "Quality: [Low/Medium/High/Premium] + 1-sentence Tamil justification\n"
-            "Cost: [Realistic Total Estimate in ₹ Lakhs/Crores] + Brief Tamil breakdown\n"
+            "Context: Basic ₹1800/sqft, Standard ₹2300/sqft, Premium ₹3000/sqft. "
+            "You MUST return exactly in this format:\n"
+            "[QUALITY]: (The quality level and brief Tamil reason)\n"
+            "[COST]: (The total price in ₹ Lakhs/Crores and brief Tamil reason)\n"
         )
         response = model.generate_content([prompt, img])
         return response.text
@@ -941,20 +940,19 @@ if True:
                         st.session_state.last_ai_error = analysis_text
                     else:
                         st.success("✅ Analysis Complete!")
-                        # Robust Parsing
+                        # Bulletproof Tag Parsing
                         q_val, c_val = "N/A", "N/A"
                         for line in analysis_text.split("\n"):
-                            lower_line = line.lower()
-                            if "quality" in lower_line or "தரம்" in lower_line:
-                                q_val = line.split(":", 1)[1].strip() if ":" in line else line
-                            elif "cost" in lower_line or "விலை" in lower_line:
-                                c_val = line.split(":", 1)[1].strip() if ":" in line else line
+                            if "[QUALITY]" in line:
+                                q_val = line.split("]", 1)[1].replace(":", "").strip()
+                            elif "[COST]" in line:
+                                c_val = line.split("]", 1)[1].replace(":", "").strip()
                         
-                        # Fallback if parsing failed
+                        # Emergency fallback if tags missing
                         if q_val == "N/A" and c_val == "N/A":
-                            q_val = "See Below"
-                            c_val = "Analyzed"
-                            st.info(analysis_text)
+                            lines = [l for l in analysis_text.split("\n") if l.strip()]
+                            q_val = lines[0] if len(lines) > 0 else "N/A"
+                            c_val = lines[1] if len(lines) > 1 else "N/A"
 
                         st.markdown(f"""
                         <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;'>
