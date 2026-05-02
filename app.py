@@ -888,7 +888,7 @@ if True:
         with col_res:
             if st.button("🔍 Analyze House", width="stretch", type="primary"):
                 if not st.session_state.get("gemini_api_key"):
-                    st.warning("⚠️ Please enter your Gemini API Key in the sidebar to unlock AI Image Analysis.")
+                    st.warning("⚠️ Please enter your [Gemini API Key](https://aistudio.google.com/app/apikey) in the sidebar to unlock AI Image Analysis & Tamil Chat.")
                 else:
                     with st.spinner("🤖 AI is scanning the house..."):
                         try:
@@ -899,11 +899,14 @@ if True:
                             
                             vision_prompt = '''
                             You are an expert real estate and construction appraiser in India. 
-                            Look at this house and estimate:
-                            1. **Construction Quality:** (Premium / Standard / Budget) based on the exterior.
-                            2. **Floors:** How many floors does it appear to have?
-                            3. **Estimated Size:** A rough guess of the square footage.
-                            4. **Estimated Price:** A rough estimated construction price in Indian Rupees (₹).
+                            Look at this house and estimate the following. 
+                            Provide each point in BOTH English and Tamil (தமிழ்).
+                            
+                            1. **Construction Quality (கட்டுமான தரம்):** (Premium / Standard / Basic) based on the exterior.
+                            2. **Floors (தளங்கள்):** How many floors does it appear to have?
+                            3. **Estimated Size (தோராயமான அளவு):** A rough guess of the square footage (Sqft).
+                            4. **Estimated Price (தோராயமான விலை):** A rough estimated construction price in Indian Rupees (₹).
+                            
                             Keep the response short, highly structured, and extremely professional. Use markdown bullet points.
                             '''
                             response = vision_model.generate_content([vision_prompt, img])
