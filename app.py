@@ -954,7 +954,7 @@ if True:
                             </div>
                             <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #f7971e; text-align: center;'>
                                 <div style='color: #f7971e; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;'>💰 Total Estimated Cost</div>
-                                <div style='color: #fff; font-weight: 900; font-size: 1.4rem; margin-top: 5px; letter-spacing: -0.5px;'>{c_val}</div>
+                                <div style='color: #fff; font-weight: 900; font-size: 1.8rem; margin-top: 5px; letter-spacing: -1px; text-shadow: 0 0 10px rgba(247,151,30,0.3);'>{c_val}</div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
