@@ -351,8 +351,19 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.rerun()
 
-    # Auto-load API key from secrets with hardcoded fallback to fix 'Missing' error
-    api_key = st.secrets.get("GEMINI_API_KEY", "AIzaSyAig2D59gwUNK6bhcUww68aiZd2_TxelnA")
+    # API Key Management
+    st.markdown("---")
+    st.markdown('<div class="sidebar-section-title">🔑 API Settings</div>', unsafe_allow_html=True)
+    
+    # Check secrets first
+    default_key = st.secrets.get("GEMINI_API_KEY", "AIzaSyAig2D59gwUNK6bhcUww68aiZd2_TxelnA")
+    
+    # Allow user to override if expired
+    user_api_key = st.text_input("Gemini API Key", value=default_key, type="password", help="Get a free key at aistudio.google.com")
+    api_key = user_api_key if user_api_key else default_key
+    
+    if "400" in st.session_state.get("last_ai_error", ""):
+        st.error("⚠️ Your API Key is EXPIRED. Please get a new one at [aistudio.google.com](https://aistudio.google.com) and paste it above.")
 
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">🌐 Language</div>', unsafe_allow_html=True)
@@ -427,10 +438,9 @@ model = load_model()
 # ── AI Analysis Cache ──────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
 def get_ai_analysis(img_bytes, api_key):
-    # Fallback to hardcoded key if empty
-    key = api_key if api_key else "AIzaSyAig2D59gwUNK6bhcUww68aiZd2_TxelnA"
     try:
-        genai.configure(api_key=key)
+        if not api_key: return "ERROR: API Key is missing."
+        genai.configure(api_key=api_key)
         # Use 1.5-flash-8b for the absolute lowest latency
         model = genai.GenerativeModel(
             "gemini-1.5-flash-8b",
@@ -444,7 +454,10 @@ def get_ai_analysis(img_bytes, api_key):
         response = model.generate_content([prompt, img])
         return response.text
     except Exception as e:
-        return f"Error: {e}"
+        err = str(e)
+        if "400" in err or "expired" in err.lower() or "invalid" in err.lower():
+            return "ERROR: API Key Expired or Invalid. Please get a new key from aistudio.google.com"
+        return f"ERROR: {err}"
 
 # ── Material estimation ────────────────────────────────────────────────────
 def estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden_area, parking, pooja_room, quality_key):
@@ -912,8 +925,9 @@ if True:
                     img_bytes = house_image.getvalue()
                     analysis_text = get_ai_analysis(img_bytes, api_key)
                     
-                    if "Error" in analysis_text:
+                    if "ERROR:" in analysis_text:
                         st.error(analysis_text)
+                        st.session_state.last_ai_error = analysis_text
                     else:
                         st.success("✅ Done!")
                         st.markdown(
