@@ -349,16 +349,8 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.rerun()
 
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section-title">API Settings</div>', unsafe_allow_html=True)
-    # Check for API key in secrets first
-    default_key = st.secrets.get("GEMINI_API_KEY", "")
-    sidebar_api_key = st.text_input("Enter Gemini API Key", type="password",
-                                    value=default_key,
-                                    key="gemini_api_key", help="Get free key at g.co/aistudio")
-
-    # Master API Key logic (combines sidebar and inline inputs)
-    api_key = sidebar_api_key or st.session_state.get("inline_api_vision") or st.session_state.get("inline_api_chat")
+    # Auto-load API key from secrets — no user input needed
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
 
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">🌐 Language</div>', unsafe_allow_html=True)
@@ -893,44 +885,32 @@ if True:
             
         with col_res:
             if st.button("🔍 Analyze House", width="stretch", type="primary"):
-                if not api_key:
-                    st.warning("Please enter your Gemini API key below or in the sidebar:")
-                    st.text_input("Enter Gemini API Key", type="password", key="inline_api_vision")
-                    if st.session_state.get("inline_api_vision"):
-                        st.rerun()
-                else:
-                    with st.spinner("🤖 AI is scanning the house..."):
-                        try:
-                            import google.generativeai as genai # type: ignore
-                            genai.configure(api_key=api_key)
-                            vision_model = genai.GenerativeModel('gemini-1.5-flash')
-                            img = Image.open(house_image)
-                            
-                            vision_prompt = f'''
-                            இந்த வீட்டை analyze பண்ணி quality, size, cost சொல்லு.
-                            
-                            Analyze this house and provide the following details in BOTH English and Tamil (தமிழ்):
-                            1. **Construction Quality (கட்டுமான தரம்)**
-                            2. **Floors (தளங்கள்)**
-                            3. **Estimated Size (தோராயமான அளவு)**
-                            4. **Estimated Price (தோராயமான விலை)**
-                            
-                            Keep the response short, highly structured, and extremely professional.
-                            '''
-                            response = vision_model.generate_content([vision_prompt, img])
-                            st.success("✅ Analysis Complete!")
-                            st.markdown(f"<div style='background:#1a1a1a; padding:15px; border-radius:10px; border:1px solid #333;'>{response.text}</div>", unsafe_allow_html=True)
-                        except Exception as e:
-                            st.error(f"Error during image analysis: {e}")
+                with st.spinner("🤖 AI is scanning the house..."):
+                    try:
+                        import google.generativeai as genai # type: ignore
+                        genai.configure(api_key=api_key)
+                        vision_model = genai.GenerativeModel('gemini-1.5-flash')
+                        img = Image.open(house_image)
+                        
+                        vision_prompt = '''
+                        இந்த வீட்டை analyze பண்ணி quality, size, cost சொல்லு.
+                        
+                        Analyze this house and provide the following details in BOTH English and Tamil (தமிழ்):
+                        1. **Construction Quality (கட்டுமான தரம்)**
+                        2. **Floors (தளங்கள்)**
+                        3. **Estimated Size (தோராயமான அளவு)**
+                        4. **Estimated Price (தோராயமான விலை)**
+                        
+                        Keep the response short, highly structured, and extremely professional.
+                        '''
+                        response = vision_model.generate_content([vision_prompt, img])
+                        st.success("✅ Analysis Complete!")
+                        st.markdown(f"<div style='background:#1a1a1a; padding:15px; border-radius:10px; border:1px solid #333;'>{response.text}</div>", unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Error during image analysis: {e}")
 
 if True:
     st.markdown(f'<div class="sec-hdr">🤖 {L.get("ai_chat", "Santhosh AI Assistant")}</div>', unsafe_allow_html=True)
-    if not api_key:
-        with st.expander("🔑 Click here to enter Gemini API Key for Real AI responses", expanded=True):
-            st.text_input("Enter Gemini API Key", type="password", key="inline_api_chat")
-            if st.session_state.get("inline_api_chat"):
-                st.rerun()
-        st.info("💡 Real AI responses in Tamil are currently disabled. Using basic automated replies.")
 
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": L.get("ai_welcome", "வணக்கம்! நான் Santhosh AI. வீட்டு கட்டுமானம் குறித்து எந்த கேள்வியும் கேளுங்கள்!")}]
