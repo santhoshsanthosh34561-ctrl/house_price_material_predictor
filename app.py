@@ -455,7 +455,7 @@ def get_ai_analysis(img_bytes, api_key):
         prompt = (
             "Analyze this house image. You MUST return exactly 2 lines, nothing else:\n"
             "Quality: [Low/Medium/High/Premium] + Brief Tamil description\n"
-            "Cost: [Estimated ₹ Amount] + Brief Tamil description\n"
+            "Cost: [Total Estimated Construction Cost in ₹ Lakhs/Crores] + Brief Tamil explanation\n"
         )
         response = model.generate_content([prompt, img])
         return response.text
@@ -950,8 +950,8 @@ if True:
                                 <div style='color: #fff; font-weight: 700; font-size: 1rem; margin-top: 5px;'>{q_val}</div>
                             </div>
                             <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #f7971e; text-align: center;'>
-                                <div style='color: #888; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;'>💰 Cost</div>
-                                <div style='color: #fff; font-weight: 700; font-size: 1rem; margin-top: 5px;'>{c_val}</div>
+                                <div style='color: #f7971e; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;'>💰 Total Estimated Cost</div>
+                                <div style='color: #fff; font-weight: 900; font-size: 1.4rem; margin-top: 5px; letter-spacing: -0.5px;'>{c_val}</div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
