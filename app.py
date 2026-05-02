@@ -350,6 +350,14 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
+    st.markdown('<div class="sidebar-section-title">API Settings</div>', unsafe_allow_html=True)
+    # Check for API key in secrets first
+    default_key = st.secrets.get("GEMINI_API_KEY", "")
+    api_key = st.text_input("Enter Gemini API Key", type="password",
+                            value=default_key,
+                            key="gemini_api_key", help="Get free key at g.co/aistudio")
+
+    st.markdown("---")
     st.markdown('<div class="sidebar-section-title">🌐 Language</div>', unsafe_allow_html=True)
     sel_lang = st.selectbox("Language", LANG_LIST, index=0, label_visibility="collapsed")
     L = LANGUAGES[sel_lang]
@@ -383,14 +391,6 @@ with st.sidebar:
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">📁 Dataset</div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"])
-
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section-title">API Settings</div>', unsafe_allow_html=True)
-    # Check for API key in secrets first
-    default_key = st.secrets.get("GEMINI_API_KEY", "")
-    api_key = st.text_input("Enter Gemini API Key", type="password",
-                            value=default_key,
-                            key="gemini_api_key", help="Get free key at g.co/aistudio")
 
 # Dataset upload handler
 FEATURE_COLS = ['hall', 'bedroom', 'kitchen', 'sqft', 'floor', 'bathroom', 'garden_area', 'parking', 'pooja_room']
