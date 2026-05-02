@@ -451,13 +451,11 @@ def get_ai_analysis(img_bytes, api_key):
         img.thumbnail((320, 320))
         
         prompt = (
-            "You are an expert civil engineer. Analyze this house image and provide a detailed report in BOTH Tamil and English. "
-            "Format the output as follows:\n"
+            "Analyze this house image. You must output exactly these three points in English and Tamil (தமிழ்):\n"
             "1. Construction Quality (கட்டுமான தரம்)\n"
-            "2. Total Floors (தளங்கள்)\n"
-            "3. Estimated Area (தோராயமான பரப்பு)\n"
-            "4. Approximate Market Price (சந்தை விலை ₹)\n\n"
-            "Keep it professional and helpful."
+            "2. Estimated Size (தோராயமான பரப்பு/அளவு)\n"
+            "3. Approximate Cost (தோராயமான கட்டுமான விலை/சந்தை விலை ₹)\n\n"
+            "Provide a professional and accurate estimate based on visual cues."
         )
         response = model.generate_content([prompt, img])
         return response.text
