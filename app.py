@@ -356,7 +356,7 @@ with st.sidebar:
     st.markdown('<div class="sidebar-section-title">🔑 API Settings</div>', unsafe_allow_html=True)
     
     # Check secrets first
-    default_key = st.secrets.get("GEMINI_API_KEY", "AIzaSyAig2D59gwUNK6bhcUww68aiZd2_TxelnA")
+    default_key = st.secrets.get("GEMINI_API_KEY", "AIzaSyAmbvrZ9w1tNLVPcLrh-v-o8XIQ2V2P09c")
     
     # Allow user to override if expired
     user_api_key = st.text_input("Gemini API Key", value=default_key, type="password", help="Get a free key at aistudio.google.com")
