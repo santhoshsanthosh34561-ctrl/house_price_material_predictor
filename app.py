@@ -453,9 +453,12 @@ def get_ai_analysis(img_bytes, api_key):
         img.thumbnail((320, 320))
         
         prompt = (
-            "Analyze this house image. You MUST return exactly 2 lines, nothing else:\n"
-            "Quality: [Low/Medium/High/Premium] + Brief Tamil description\n"
-            "Cost: [Total Estimated Construction Cost in ₹ Lakhs/Crores] + Brief Tamil explanation\n"
+            "You are a professional building estimator. Analyze this house image. "
+            "Context: Current construction rates are: Basic ₹1800/sqft, Standard ₹2300/sqft, Premium ₹3000/sqft. "
+            "Consider floors, exterior luxury, and structural complexity. "
+            "You MUST return exactly 2 lines, nothing else:\n"
+            "Quality: [Low/Medium/High/Premium] + 1-sentence Tamil justification\n"
+            "Cost: [Realistic Total Estimate in ₹ Lakhs/Crores] + Brief Tamil breakdown\n"
         )
         response = model.generate_content([prompt, img])
         return response.text
