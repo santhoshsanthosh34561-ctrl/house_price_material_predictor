@@ -385,9 +385,10 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"])
 
     st.markdown("---")
+    st.markdown('<div class="sidebar-section-title">🔑 Settings</div>', unsafe_allow_html=True)
     # Check for API key in secrets first
     default_key = st.secrets.get("GEMINI_API_KEY", "")
-    api_key = st.text_input("Gemini API Key (optional)", type="password",
+    api_key = st.text_input("Enter Gemini API Key", type="password",
                             value=default_key,
                             key="gemini_api_key", help="Get free key at g.co/aistudio")
 
@@ -899,17 +900,16 @@ if True:
                             vision_model = genai.GenerativeModel('gemini-1.5-flash')
                             img = Image.open(house_image)
                             
-                            vision_prompt = '''
-                            You are an expert real estate and construction appraiser in India. 
-                            Look at this house and estimate the following. 
-                            Provide each point in BOTH English and Tamil (தமிழ்).
+                            vision_prompt = f'''
+                            இந்த வீட்டை analyze பண்ணி quality, size, cost சொல்லு.
                             
-                            1. **Construction Quality (கட்டுமான தரம்):** (Premium / Standard / Basic) based on the exterior.
-                            2. **Floors (தளங்கள்):** How many floors does it appear to have?
-                            3. **Estimated Size (தோராயமான அளவு):** A rough guess of the square footage (Sqft).
-                            4. **Estimated Price (தோராயமான விலை):** A rough estimated construction price in Indian Rupees (₹).
+                            Analyze this house and provide the following details in BOTH English and Tamil (தமிழ்):
+                            1. **Construction Quality (கட்டுமான தரம்)**
+                            2. **Floors (தளங்கள்)**
+                            3. **Estimated Size (தோராயமான அளவு)**
+                            4. **Estimated Price (தோராயமான விலை)**
                             
-                            Keep the response short, highly structured, and extremely professional. Use markdown bullet points.
+                            Keep the response short, highly structured, and extremely professional.
                             '''
                             response = vision_model.generate_content([vision_prompt, img])
                             st.success("✅ Analysis Complete!")
