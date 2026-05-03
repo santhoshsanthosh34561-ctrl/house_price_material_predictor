@@ -418,6 +418,37 @@ if uploaded_file is not None:
     except Exception as e:
         st.sidebar.error(f"Error: {e}")
 
+
+# ── AI Image Analysis ──────────────────────────────────────────────────────
+@st.cache_data(show_spinner=False)
+def get_ai_image_analysis(img_bytes, api_key):
+    try:
+        if not api_key: return "ERROR: API Key is missing."
+        genai.configure(api_key=api_key)
+        # Use the latest flash model for guaranteed availability and speed
+        model = genai.GenerativeModel(
+            "gemini-flash-latest",
+            generation_config={"max_output_tokens": 400, "temperature": 0.3}
+        )
+        
+        import io
+        img = Image.open(io.BytesIO(img_bytes))
+        # Resize for faster processing
+        img.thumbnail((512, 512))
+        
+        prompt = (
+            "Analyze this house image. You MUST return exactly 3 lines with these markers, nothing else:\n"
+            "[SIZE] (small/medium/large) + Brief description\n"
+            "[FLOORS] (Number of floors) + Brief description\n"
+            "[QUALITY] (low/medium/high) + Brief description\n"
+            "Provide descriptions in both English and Tamil (தமிழ்)."
+        )
+        
+        response = model.generate_content([prompt, img])
+        return response.text
+    except Exception as e:
+        return f"ERROR: {str(e)}"
+
 # ── Model ─────────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
@@ -437,37 +468,6 @@ def load_model():
 
 model = load_model()
 
-# ── AI Analysis Cache ──────────────────────────────────────────────────────
-@st.cache_data(show_spinner=False)
-def get_ai_analysis(img_bytes, api_key):
-    try:
-        if not api_key: return "ERROR: API Key is missing. Please add it in the sidebar."
-        genai.configure(api_key=api_key)
-        # Use the latest flash model alias for guaranteed availability and speed
-        model = genai.GenerativeModel(
-            "gemini-flash-latest",
-            generation_config={"max_output_tokens": 150, "temperature": 0.1}
-        )
-        import io
-        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-        img.thumbnail((320, 320))
-        
-        prompt = (
-            "You are a professional building estimator. Analyze this house image. "
-            "Context: Basic ₹1800/sqft, Standard ₹2300/sqft, Premium ₹3000/sqft. "
-            "You MUST return exactly in this format:\n"
-            "[QUALITY]: (The quality level and brief Tamil reason)\n"
-            "[COST]: (The total price in ₹ Lakhs/Crores and brief Tamil reason)\n"
-        )
-        response = model.generate_content([prompt, img])
-        return response.text
-    except Exception as e:
-        err = str(e)
-        if "403" in err:
-            return "ERROR: API Key Leaked or Disabled. Please use a new key."
-        if "400" in err or "expired" in err.lower() or "invalid" in err.lower():
-            return "ERROR: API Key Expired or Invalid."
-        return f"ERROR: {err}"
 
 # ── Material estimation ────────────────────────────────────────────────────
 def estimate_materials(sqft, hall, bedroom, kitchen, floor, bathroom, garden_area, parking, pooja_room, quality_key):
@@ -917,58 +917,56 @@ if True:
     except Exception as e:
         st.error(f"Error loading analytics: {e}")
 
+
 if True:
     st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 5: 🖼️ AI Image-based House Evaluator</div>', unsafe_allow_html=True)
-    st.write("Upload a picture of a house, and our AI will analyze the exterior to estimate its construction quality, size, and approximate cost!")
-
-    house_image = st.file_uploader("Upload House Image", type=["png", "jpg", "jpeg"], key="house_img")
-
+    st.write("Upload a picture of a house, and our AI will analyze the exterior to estimate its size, floors, and construction quality!")
+    
+    house_image = st.file_uploader("Upload House Image", type=["jpg", "jpeg", "png"], key="house_eval_uploader")
+    
     if house_image is not None:
         col_img, col_res = st.columns([1, 1.2])
-
+        
         with col_img:
             st.image(house_image, caption="Uploaded House", use_container_width=True)
-
+            
         with col_res:
-            if st.button("⚡ Fast Scan", width="stretch", type="primary"):
-                with st.spinner("⚡ Processing..."):
-                    img_bytes = house_image.getvalue()
-                    analysis_text = get_ai_analysis(img_bytes, api_key)
+            if st.button("🔍 Analyze House", use_container_width=True, type="primary"):
+                with st.spinner("AI is analyzing the house structure..."):
+                    analysis_result = get_ai_image_analysis(house_image.getvalue(), api_key)
                     
-                    if "ERROR:" in analysis_text:
-                        st.error(analysis_text)
-                        st.session_state.last_ai_error = analysis_text
+                    if "ERROR" in analysis_result:
+                        st.error(analysis_result)
                     else:
                         st.success("✅ Analysis Complete!")
-                        # Bulletproof Tag Parsing
-                        q_val, c_val = "N/A", "N/A"
-                        for line in analysis_text.split("\n"):
-                            if "[QUALITY]" in line:
-                                q_val = line.split("]", 1)[1].replace(":", "").strip()
-                            elif "[COST]" in line:
-                                c_val = line.split("]", 1)[1].replace(":", "").strip()
-                        
-                        # Emergency fallback if tags missing
-                        if q_val == "N/A" and c_val == "N/A":
-                            lines = [l for l in analysis_text.split("\n") if l.strip()]
-                            q_val = lines[0] if len(lines) > 0 else "N/A"
-                            c_val = lines[1] if len(lines) > 1 else "N/A"
+                        # Robust Parsing
+                        s_val, f_val, q_val = "N/A", "N/A", "N/A"
+                        for line in analysis_result.split('\n'):
+                            if "[SIZE]" in line: s_val = line.replace("[SIZE]", "").strip()
+                            if "[FLOORS]" in line: f_val = line.replace("[FLOORS]", "").strip()
+                            if "[QUALITY]" in line: q_val = line.replace("[QUALITY]", "").strip()
 
-                        st.markdown(f"""
-                        <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;'>
-                            <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #ffd200; text-align: center;'>
-                                <div style='color: #888; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;'>🏗️ Quality</div>
-                                <div style='color: #fff; font-weight: 700; font-size: 1rem; margin-top: 5px;'>{q_val}</div>
+                        # UI Display
+                        st.markdown(f'''
+                            <div style='display: grid; grid-template-columns: 1fr; gap: 10px;'>
+                                <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #f7971e;'>
+                                    <div style='color: #888; font-size: 0.8rem; text-transform: uppercase;'>📏 House Size</div>
+                                    <div style='color: #ffd200; font-size: 1.1rem; font-weight: 700;'>{s_val}</div>
+                                </div>
+                                <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #28a745;'>
+                                    <div style='color: #888; font-size: 0.8rem; text-transform: uppercase;'>🏢 Number of Floors</div>
+                                    <div style='color: #fff; font-size: 1.1rem; font-weight: 700;'>{f_val}</div>
+                                </div>
+                                <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #17a2b8;'>
+                                    <div style='color: #888; font-size: 0.8rem; text-transform: uppercase;'>🏗️ Construction Quality</div>
+                                    <div style='color: #fff; font-size: 1.1rem; font-weight: 700;'>{q_val}</div>
+                                </div>
                             </div>
-                            <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #f7971e; text-align: center;'>
-                                <div style='color: #f7971e; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;'>💰 Total Estimated Cost</div>
-                                <div style='color: #fff; font-weight: 900; font-size: 1.8rem; margin-top: 5px; letter-spacing: -1px; text-shadow: 0 0 10px rgba(247,151,30,0.3);'>{c_val}</div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        ''', unsafe_allow_html=True)
+
 
 if True:
-    st.markdown(f'<div class="sec-hdr">🤖 {L.get("ai_chat", "Santhosh AI Assistant")}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">🤖 {L.get("ai_chat", "Santhosh AI Assistant")}</div>', unsafe_allow_html=True)
 
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": L.get("ai_welcome", "வணக்கம்! நான் Santhosh AI. வீட்டு கட்டுமானம் குறித்து எந்த கேள்வியும் கேளுங்கள்!")}]
