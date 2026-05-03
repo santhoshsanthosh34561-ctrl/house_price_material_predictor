@@ -407,16 +407,40 @@ FEATURE_COLS = ['hall', 'bedroom', 'kitchen', 'sqft', 'floor', 'bathroom', 'gard
 if uploaded_file is not None:
     try:
         new_df = pd.read_csv(uploaded_file)
-        if all(col in new_df.columns for col in FEATURE_COLS + ['price']):
+        # Normalize column names: lowercase and strip spaces
+        new_df.columns = new_df.columns.str.strip().str.lower()
+        
+        # Auto-map common column variations
+        rename_map = {
+            'area': 'sqft', 'square feet': 'sqft', 'sq.ft': 'sqft', 
+            'cost': 'price', 'amount': 'price',
+            'beds': 'bedroom', 'rooms': 'bedroom',
+            'baths': 'bathroom', 'bathrooms': 'bathroom'
+        }
+        new_df.rename(columns=rename_map, inplace=True)
+
+        if 'sqft' not in new_df.columns or 'price' not in new_df.columns:
+            st.sidebar.error("❌ Missing required columns: 'sqft' and 'price' are mandatory.")
+        else:
+            # Add missing optional columns as 0
+            missing = []
+            for col in FEATURE_COLS:
+                if col not in new_df.columns:
+                    new_df[col] = 0
+                    missing.append(col)
+                    
+            # Save formatted dataset
+            new_df = new_df[FEATURE_COLS + ['price']]
             new_df.to_csv("house_prediction.csv", index=False)
             if os.path.exists("house_model_v6.pkl"):
                 os.remove("house_model_v6.pkl")
             st.cache_resource.clear()
+            
+            if missing:
+                st.sidebar.warning(f"⚠️ Added missing columns with 0: {', '.join(missing)}")
             st.sidebar.success("✅ Dataset Updated! Model Retrained!")
-        else:
-            st.sidebar.error("❌ Missing required columns in CSV.")
     except Exception as e:
-        st.sidebar.error(f"Error: {e}")
+        st.sidebar.error(f"Error reading CSV: {e}")
 
 # ── AI Image Analysis ──────────────────────────────────────────────────────
 import json as _json
