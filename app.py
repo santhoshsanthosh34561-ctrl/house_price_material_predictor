@@ -807,55 +807,84 @@ if True:
 if True:
     # ── Location Map ──────────────────────────────────────────────────────────
     st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 2: 📍 Property Location (Interactive)</div>', unsafe_allow_html=True)
-    st.write("Click anywhere on the map OR type your location below. Prices adjust automatically based on distance from the city center!")
+    st.write("Select your district or click on the map to see the average property/construction rate for your area.")
 
-    col_search, col_btn = st.columns([4, 1])
-    with col_search:
-        search_query = st.text_input("Search Location", placeholder="e.g. Anna Nagar, Chennai", label_visibility="collapsed")
-    with col_btn:
-        if st.button("🔍 Search", use_container_width=True) and search_query:
-            try:
-                from geopy.geocoders import Nominatim # type: ignore
-                geolocator = Nominatim(user_agent="santhosh_ai_app")
-                location = geolocator.geocode(search_query)
-                if location:
-                    st.session_state.clicked_lat = location.latitude
-                    st.session_state.clicked_lon = location.longitude
-                    st.rerun()
-                else:
-                    st.error("Location not found!")
-            except Exception:
-                st.error("Error searching location.")
+    TN_DISTRICT_PRICES = {
+        "Chennai": 6000, "Coimbatore": 5000, "Chengalpattu": 4500, "Kanchipuram": 3000, "Tiruvallur": 3500,
+        "Madurai": 4000, "Trichy": 4200, "Salem": 3500, "Erode": 3000, "Vellore": 3200,
+        "Tirunelveli": 2800, "Thoothukudi": 2700, "Dindigul": 2500, "Thanjavur": 3000, "Nagapattinam": 2200,
+        "Mayiladuthurai": 2400, "Cuddalore": 2600, "Villupuram": 2200, "Kallakurichi": 2000, "Krishnagiri": 3500,
+        "Dharmapuri": 2300, "Namakkal": 2800, "Karur": 2400, "Perambalur": 2100, "Ariyalur": 2000,
+        "Pudukkottai": 2300, "Ramanathapuram": 2100, "Sivagangai": 2200, "Virudhunagar": 2600, "Tenkasi": 2300,
+        "The Nilgiris": 4500, "Theni": 2700, "Tiruppur": 4000, "Ranipet": 3200, "Tirupattur": 3000, "Kanniyakumari": 3500
+    }
+
+    if "active_district" not in st.session_state:
+        st.session_state.active_district = "Chennai"
+
+    # Set dropdown to the active district
+    dist_list = list(TN_DISTRICT_PRICES.keys())
+    idx = dist_list.index(st.session_state.active_district) if st.session_state.active_district in dist_list else 0
+    selected_district = st.selectbox("Select District", dist_list, index=idx)
+
+    # If user changed district via dropdown, auto-update the map
+    if selected_district != st.session_state.active_district:
+        st.session_state.active_district = selected_district
+        try:
+            from geopy.geocoders import Nominatim
+            geolocator = Nominatim(user_agent="santhosh_ai_app")
+            location = geolocator.geocode(selected_district + " District, Tamil Nadu, India")
+            if location:
+                st.session_state.clicked_lat = location.latitude
+                st.session_state.clicked_lon = location.longitude
+        except:
+            pass
+        st.rerun()
 
     map_center = [st.session_state.clicked_lat, st.session_state.clicked_lon]
-    m = folium.Map(location=map_center, zoom_start=12)
-    folium.Marker(CITY_CENTER, popup="City Center", tooltip="City Center", icon=folium.Icon(color="red", icon="star")).add_to(m)
+    m = folium.Map(location=map_center, zoom_start=11)
 
-    if st.session_state.clicked_lat != CITY_CENTER[0] or st.session_state.clicked_lon != CITY_CENTER[1]:
-        folium.Marker(
-            [st.session_state.clicked_lat, st.session_state.clicked_lon], 
-            popup="Your Plot", tooltip="Your Plot", icon=folium.Icon(color="blue", icon="home")
-        ).add_to(m)
+    folium.Marker(
+        [st.session_state.clicked_lat, st.session_state.clicked_lon], 
+        popup=f"Selected: {st.session_state.active_district}", 
+        tooltip=st.session_state.active_district, 
+        icon=folium.Icon(color="blue", icon="home")
+    ).add_to(m)
 
     map_data = st_folium(m, height=350, use_container_width=True, returned_objects=["last_clicked"])
 
+    # If user clicked the map, auto-update the district via reverse geocoding
     if map_data and map_data.get("last_clicked"):
         new_lat = map_data["last_clicked"]["lat"]
         new_lon = map_data["last_clicked"]["lng"]
         if new_lat != st.session_state.clicked_lat or new_lon != st.session_state.clicked_lon:
             st.session_state.clicked_lat = new_lat
             st.session_state.clicked_lon = new_lon
+            try:
+                from geopy.geocoders import Nominatim
+                geolocator = Nominatim(user_agent="santhosh_ai_app")
+                rev = geolocator.reverse([new_lat, new_lon], timeout=3)
+                if rev:
+                    addr = rev.raw.get('address', {})
+                    dist_str = addr.get('state_district', addr.get('county', addr.get('city', '')))
+                    for d in TN_DISTRICT_PRICES:
+                        if d.lower() in dist_str.lower():
+                            st.session_state.active_district = d
+                            break
+            except:
+                pass
             st.rerun()
 
-    st.info(f"📍 **Distance:** {dist_km:.1f} km &nbsp;|&nbsp; **Zone:** {loc_label}")
-
     # ── Map-specific Price Card ──
-    loc_sqft_price = (pred / sqft)
+    dist_name = st.session_state.active_district
+    loc_sqft_price = TN_DISTRICT_PRICES.get(dist_name, 6000)
+    district_total_cost = loc_sqft_price * sqft
+
     st.markdown(f'''
     <div style="background: rgba(255, 210, 0, 0.1); border: 1px solid #ffd200; border-radius: 15px; padding: 1.5rem; text-align: center; margin-top: 1rem;">
-        <div style="color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.3rem;">📍 Location Area Price</div>
-        <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">₹{int(loc_sqft_price):,}<span style="font-size:1.2rem; color:#aaa;"> /sqft</span></div>
-        <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.1rem;">Zone: {loc_label}</div>
+        <div style="color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.3rem;">📍 District Property Price</div>
+        <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">₹{int(district_total_cost):,}<span style="font-size:1.2rem; color:#aaa;"> Total</span></div>
+        <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.1rem;">Rate: ₹{loc_sqft_price}/sqft in {dist_name}</div>
     </div>
     ''', unsafe_allow_html=True)
 
