@@ -1026,70 +1026,56 @@ if True:
 if True:
     # ── Smart Recommendation System ────────────────────────────────────────────
     st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 3: 🤖 Smart Budget Planner (AI Recommender)</div>', unsafe_allow_html=True)
-    st.write("Enter your total budget, and Santhosh AI will calculate what you can afford in your selected location!")
+    st.write("Enter your total budget, and Santhosh AI will calculate what house you can build (Construction Cost only)!")
 
-    user_budget = st.number_input("💰 Your Maximum Budget (₹)", min_value=500000, max_value=500000000, value=5000000, step=100000)
+    user_budget = st.number_input("💰 Your Maximum Budget (₹)", min_value=500000, max_value=500000000, value=3000000, step=100000)
 
     if user_budget > 0:
-        base_cost = st.session_state.get("price_per_sqft", 2000)
-        # Land price from Step 2
-        land_price = base_cost * 435.56 * st.session_state.get("map_cent_input", 2.5)
-        
-        premium_rate = base_cost * 1.3
-        standard_rate = base_cost
-        basic_rate = base_cost * 0.8
+        # Fixed Construction Rates per sq.ft (ignoring location as requested)
+        premium_rate = 3000
+        standard_rate = 2300
+        basic_rate = 1800
 
         def get_bhk(area):
-            if area < 800:
-                return "1 BHK"
-            elif area < 1200:
-                return "2 BHK"
-            elif area < 2000:
-                return "3 BHK"
-            else:
-                return "4 BHK"
+            if area < 800: return "1 BHK"
+            elif area < 1200: return "2 BHK"
+            elif area < 2000: return "3 BHK"
+            else: return "4 BHK"
 
-        if user_budget <= land_price:
-            st.warning(f"⚠️ Your budget (₹{user_budget:,}) is not enough to cover the Land Price (₹{int(land_price):,}) in this location. Please increase your budget or choose a cheaper area.")
-        else:
-            rem_budget = user_budget - land_price
-            rc1, rc2, rc3 = st.columns(3)
+        rc1, rc2, rc3 = st.columns(3)
 
-            with rc1:
-                sq = int(rem_budget / premium_rate)
-                cons_cost = sq * premium_rate
-                st.markdown(f'''
-                <div class="stage-card" style="border-top: 3px solid #f7971e;">
-                    <div style="color:#ffd200; font-weight:700; margin-bottom:8px;">🌟 Premium Option</div>
-                    <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
-                    <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Total: ₹{int(land_price + cons_cost):,}</div>
-                    <div style="font-size:0.8rem; color:#ccc; margin-bottom:10px;">Land: ₹{int(land_price):,}<br>Build: ₹{int(cons_cost):,}</div>
-                    <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
-                </div>''', unsafe_allow_html=True)
+        with rc1:
+            sq = int(user_budget / premium_rate)
+            st.markdown(f'''
+            <div class="stage-card" style="border-top: 3px solid #f7971e;">
+                <div style="color:#ffd200; font-weight:700; margin-bottom:8px;">🌟 Premium Option</div>
+                <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
+                <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Highest Quality Materials</div>
+                <div style="font-size:0.8rem; color:#ccc; margin-bottom:10px;">Build Cost: ₹{int(user_budget):,}</div>
+                <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
+            </div>''', unsafe_allow_html=True)
 
-            with rc2:
-                sq = int(rem_budget / standard_rate)
-                cons_cost = sq * standard_rate
-                st.markdown(f'''
-                <div class="stage-card" style="border-top: 3px solid #28a745;">
-                    <div style="color:#28a745; font-weight:700; margin-bottom:8px;">🏢 Standard Option</div>
-                    <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
-                    <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Total: ₹{int(land_price + cons_cost):,}</div>
-                    <div style="font-size:0.8rem; color:#ccc; margin-bottom:10px;">Land: ₹{int(land_price):,}<br>Build: ₹{int(cons_cost):,}</div>
-                    <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
-                </div>''', unsafe_allow_html=True)
+        with rc2:
+            sq = int(user_budget / standard_rate)
+            st.markdown(f'''
+            <div class="stage-card" style="border-top: 3px solid #28a745;">
+                <div style="color:#28a745; font-weight:700; margin-bottom:8px;">🏢 Standard Option</div>
+                <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
+                <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Great Balance of Quality</div>
+                <div style="font-size:0.8rem; color:#ccc; margin-bottom:10px;">Build Cost: ₹{int(user_budget):,}</div>
+                <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
+            </div>''', unsafe_allow_html=True)
 
-            with rc3:
-                sq = int(rem_budget / basic_rate)
-                cons_cost = sq * basic_rate
-                st.markdown(f'''
-                <div class="stage-card" style="border-top: 3px solid #17a2b8;">
-                    <div style="color:#17a2b8; font-weight:700; margin-bottom:8px;">📉 Basic Option</div>
-                    <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
-                    <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Total: ₹{int(land_price + cons_cost):,}</div>
-                    <div style="font-size:0.8rem; color:#ccc; margin-bottom:10px;">Land: ₹{int(land_price):,}<br>Build: ₹{int(cons_cost):,}</div>
-                    <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
-                </div>''', unsafe_allow_html=True)
+        with rc3:
+            sq = int(user_budget / basic_rate)
+            st.markdown(f'''
+            <div class="stage-card" style="border-top: 3px solid #17a2b8;">
+                <div style="color:#17a2b8; font-weight:700; margin-bottom:8px;">📉 Basic Option</div>
+                <div style="font-size:1.4rem; font-weight:900; margin-bottom:5px;">{sq} Sq.Ft</div>
+                <div style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">Largest House Size</div>
+                <div style="font-size:0.8rem; color:#ccc; margin-bottom:10px;">Build Cost: ₹{int(user_budget):,}</div>
+                <div class="mat-row"><span>🛏️ Suggestion:</span><span class="qty-badge">{get_bhk(sq)}</span></div>
+            </div>''', unsafe_allow_html=True)
 
 
 if True:
