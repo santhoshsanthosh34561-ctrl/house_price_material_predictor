@@ -830,9 +830,10 @@ if True:
             dist = addr.get("state_district", addr.get("county", addr.get("city", "")))
             if dist:
                 dist = dist.replace(" District", "").strip()
-            return dist
+            village = addr.get("suburb", addr.get("village", addr.get("town", addr.get("neighbourhood", ""))))
+            return dist, village
         except:
-            return ""
+            return "", ""
 
     def adjust_price(base_price, distance):
         if distance < 0.05:
@@ -902,9 +903,13 @@ if True:
 
     # Show clicked plot marker if different from center
     if st.session_state.clicked_lat != st.session_state.center_lat or st.session_state.clicked_lon != st.session_state.center_lon:
+        display_name = st.session_state.get("active_village", "")
+        if not display_name:
+            display_name = "Your Selected Area"
         folium.Marker(
             [st.session_state.clicked_lat, st.session_state.clicked_lon], 
-            popup="Your Plot", 
+            popup=display_name, 
+            tooltip=f"📍 {display_name}",
             icon=folium.Icon(color="blue", icon="home")
         ).add_to(m)
 
@@ -918,7 +923,9 @@ if True:
             st.session_state.clicked_lat = new_lat
             st.session_state.clicked_lon = new_lon
             
-            dist_name = get_district_requests(new_lat, new_lon)
+            dist_name, vill_name = get_district_requests(new_lat, new_lon)
+            if vill_name:
+                st.session_state.active_village = vill_name
             
             # Match detected district to our dictionary
             for d in district_price:
@@ -956,7 +963,8 @@ if True:
     else:
         zone = "Outskirts (Lower Cost)"
 
-    st.success(f"🏙 District: {district} &nbsp;&nbsp;|&nbsp;&nbsp; 📍 Zone: {zone}")
+    display_village = st.session_state.get("active_village", "")
+    st.success(f"🏙 District: {district} &nbsp;&nbsp;|&nbsp;&nbsp; 🏘️ Area: {display_village} &nbsp;&nbsp;|&nbsp;&nbsp; 📍 Zone: {zone}")
 
     # ── Map-specific Price Card ──
     # Save price
