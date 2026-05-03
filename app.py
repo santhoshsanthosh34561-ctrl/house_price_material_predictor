@@ -488,12 +488,32 @@ def analyze_image(img_bytes, api_key):
     except Exception as e:
         return {"error": str(e)}
 
+def get_area_from_size(size):
+    if size == "small":
+        return 800
+    elif size == "medium":
+        return 1200
+    elif size == "large":
+        return 2000
+    return 1200
 
-def estimate_cost(area, quality):
-    """Calculate estimated construction cost based on area and quality."""
+def adjust_area_by_floors(area, floors):
+    return area * floors
+
+def estimate_cost(size, quality, floors):
+    """Calculate estimated construction cost based on size, floors, and quality."""
+    base_area = get_area_from_size(size)
+    total_area = adjust_area_by_floors(base_area, floors)
+
     cost_per_sqft = 2000
-    quality_factor = {"low": 0.8, "medium": 1.0, "high": 1.3}
-    return area * cost_per_sqft * quality_factor.get(quality, 1)
+
+    quality_factor = {
+        "low": 0.8,
+        "medium": 1.0,
+        "high": 1.3
+    }
+
+    return total_area * cost_per_sqft * quality_factor.get(quality, 1)
 
 
 # ── Model ─────────────────────────────────────────────────────────────────
@@ -1009,9 +1029,11 @@ if True:
                 floors = st.session_state.get("img_eval_floors", 1)
                 quality = st.session_state.get("img_eval_quality", "medium")
 
-                # Calculate cost: area * 2000 * quality_factor
-                area = sqft  # from sidebar
-                cost = estimate_cost(area, quality)
+                # Calculate cost based on AI size and floors
+                cost = estimate_cost(size, quality, floors)
+                
+                base_area = get_area_from_size(size)
+                total_area = adjust_area_by_floors(base_area, floors)
                 q_rate = int(2000 * {"low": 0.8, "medium": 1.0, "high": 1.3}.get(quality, 1.0))
 
                 st.success("✅ Analysis Complete!")
@@ -1036,7 +1058,7 @@ if True:
                     <div style='background: linear-gradient(135deg, #f7971e22, #ffd20022); padding: 20px; border-radius: 12px; border: 1.5px solid #ffd200; text-align: center;'>
                         <div style='color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;'>💰 Estimated Cost</div>
                         <div style='color: #fff; font-size: 2.5rem; font-weight: 900; margin: 5px 0;'>₹{int(cost):,}</div>
-                        <div style='color: #aaa; font-size: 0.8rem;'>{area} sqft × ₹{q_rate}/sqft ({quality.title()} quality)</div>
+                        <div style='color: #aaa; font-size: 0.8rem;'>{total_area} sqft ({base_area} sqft × {floors} floors) × ₹{q_rate}/sqft ({quality.title()} quality)</div>
                     </div>
                 ''', unsafe_allow_html=True)
 
