@@ -667,7 +667,7 @@ interior_cost = sqft * 300
 parking_cost = parking * 50000
 
 # Add room-specific construction costs
-room_cost = (bedroom * 25000) + (hall * 15000) + (kitchen * 100000) + (bathroom * 75000) + (pooja_room * 40000)
+room_cost = (hall * 50000) + (kitchen * 80000) + (bathroom * 60000) + (pooja_room * 30000)
 
 misc_cost = 20000
 
@@ -1066,7 +1066,7 @@ if True:
         
         parking_cost = parking * 50000
         misc_cost = 20000
-        room_cost = (bedroom * 25000) + (hall * 15000) + (kitchen * 100000) + (bathroom * 75000) + (pooja_room * 40000)
+        room_cost = (hall * 50000) + (kitchen * 80000) + (bathroom * 60000) + (pooja_room * 30000)
 
         with rc1:
             # Premium
