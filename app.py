@@ -418,9 +418,15 @@ if uploaded_file is not None:
             'baths': 'bathroom', 'bathrooms': 'bathroom'
         }
         new_df.rename(columns=rename_map, inplace=True)
+        
+        # Fallback: If headers are completely missing/broken, guess based on position
+        if 'sqft' not in new_df.columns and len(new_df.columns) >= 4:
+            new_df.rename(columns={new_df.columns[3]: 'sqft'}, inplace=True)
+        if 'price' not in new_df.columns and len(new_df.columns) >= 1:
+            new_df.rename(columns={new_df.columns[-1]: 'price'}, inplace=True)
 
         if 'sqft' not in new_df.columns or 'price' not in new_df.columns:
-            st.sidebar.error("❌ Missing required columns: 'sqft' and 'price' are mandatory.")
+            st.sidebar.error(f"❌ Cannot identify 'sqft' or 'price'. Found columns: {list(new_df.columns)}")
         else:
             # Add missing optional columns as 0
             missing = []
