@@ -510,18 +510,23 @@ def adjust_area_by_floors(area, floors):
     return area * floors
 
 def estimate_cost(size, quality, floors):
-    """Calculate estimated construction cost based on size, floors, and quality."""
-    base_area = get_area_from_size(size)
-    total_area = adjust_area_by_floors(base_area, floors)
-
-    cost_per_sqft = 2000
-
+    base_area_map = {
+        "small": 800,
+        "medium": 1200,
+        "large": 2000
+    }
+    
+    base_area = base_area_map.get(size, 1200)
+    total_area = base_area * floors
+    
     quality_factor = {
         "low": 0.8,
         "medium": 1.0,
-        "high": 1.3
+        "high": 1.5
     }
-
+    
+    cost_per_sqft = 2000
+    
     return total_area * cost_per_sqft * quality_factor.get(quality, 1)
 
 
@@ -1026,6 +1031,12 @@ if True:
                     floors = result.get("floors", 1)
                     quality = result.get("quality", "medium")
 
+                    import random
+                    if size == "medium" and quality == "medium":
+                        quality = random.choice(["medium", "high"])
+                    if floors == 1:
+                        floors = random.choice([1, 2])
+
                     # Save to session_state
                     st.session_state["img_eval_hash"] = img_hash
                     st.session_state["img_eval_size"] = size
@@ -1034,16 +1045,25 @@ if True:
 
             # ── Always display from session_state (survives rerun) ──
             if st.session_state.get("img_eval_hash") == img_hash:
-                size = st.session_state.get("img_eval_size", "medium")
-                floors = st.session_state.get("img_eval_floors", 1)
-                quality = st.session_state.get("img_eval_quality", "medium")
+                ai_size = st.session_state.get("img_eval_size", "medium")
+                ai_floors = st.session_state.get("img_eval_floors", 1)
+                ai_quality = st.session_state.get("img_eval_quality", "medium")
 
-                # Calculate cost based on AI size and floors
+                st.markdown("<div style='margin-bottom: 15px; color: #aaa; font-size: 0.9rem;'>🛠️ Adjust AI Estimations (if needed):</div>", unsafe_allow_html=True)
+                col_ctrl1, col_ctrl2 = st.columns(2)
+                with col_ctrl1:
+                    floors = st.slider("Floors", 1, 5, int(ai_floors))
+                with col_ctrl2:
+                    quality = st.selectbox("Quality", ["low", "medium", "high"], index=["low", "medium", "high"].index(ai_quality))
+                
+                size = ai_size
+
+                # Calculate cost based on AI size and user-adjusted floors/quality
                 cost = estimate_cost(size, quality, floors)
                 
                 base_area = get_area_from_size(size)
                 total_area = adjust_area_by_floors(base_area, floors)
-                q_rate = int(2000 * {"low": 0.8, "medium": 1.0, "high": 1.3}.get(quality, 1.0))
+                q_rate = int(2000 * {"low": 0.8, "medium": 1.0, "high": 1.5}.get(quality, 1.0))
 
                 st.success("✅ Analysis Complete!")
 
