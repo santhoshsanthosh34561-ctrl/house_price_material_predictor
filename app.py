@@ -665,9 +665,13 @@ floor_factor = 1 + (floor - 1) * 0.15
 base_construction = sqft * base_rate * floor_factor
 interior_cost = sqft * 300
 parking_cost = parking * 50000
+
+# Add room-specific construction costs
+room_cost = (bedroom * 25000) + (hall * 15000) + (kitchen * 100000) + (bathroom * 75000) + (pooja_room * 40000)
+
 misc_cost = 20000
 
-sub_total = base_construction + interior_cost + parking_cost + misc_cost
+sub_total = base_construction + interior_cost + parking_cost + room_cost + misc_cost
 pred = sub_total * Q["mult"] * loc_mult
 
 st.markdown("---")
@@ -1062,12 +1066,13 @@ if True:
         
         parking_cost = parking * 50000
         misc_cost = 20000
+        room_cost = (bedroom * 25000) + (hall * 15000) + (kitchen * 100000) + (bathroom * 75000) + (pooja_room * 40000)
 
         with rc1:
             # Premium
             q_mult = q_factors["Premium"]
             denom = (base_rate * floor_factor + 300)
-            sq = int(((user_budget / q_mult) - parking_cost - misc_cost) / denom)
+            sq = int(((user_budget / q_mult) - parking_cost - misc_cost - room_cost) / denom)
             sq = max(0, sq)
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #f7971e;">
@@ -1082,7 +1087,7 @@ if True:
             # Standard
             q_mult = q_factors["Standard"]
             denom = (base_rate * floor_factor + 300)
-            sq = int(((user_budget / q_mult) - parking_cost - misc_cost) / denom)
+            sq = int(((user_budget / q_mult) - parking_cost - misc_cost - room_cost) / denom)
             sq = max(0, sq)
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #28a745;">
@@ -1097,7 +1102,7 @@ if True:
             # Basic
             q_mult = q_factors["Basic"]
             denom = (base_rate * floor_factor + 300)
-            sq = int(((user_budget / q_mult) - parking_cost - misc_cost) / denom)
+            sq = int(((user_budget / q_mult) - parking_cost - misc_cost - room_cost) / denom)
             sq = max(0, sq)
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #17a2b8;">
