@@ -940,28 +940,34 @@ if True:
     st.success(f"🏙 District: {district} &nbsp;&nbsp;|&nbsp;&nbsp; 📍 Zone: {zone}")
 
     # ── Map-specific Price Card ──
-    st.session_state["price"] = final_price_per_sqft
-    price_per_sqft = st.session_state["price"]
-    total_price = price_per_sqft * sqft
+    # Save price
+    st.session_state["price_per_sqft"] = final_price_per_sqft
+    
+    # Independent Sq.ft input for this section
+    map_sqft = st.number_input("📐 Enter Sq.ft for Location Calculation", min_value=100, value=1200, step=100, key="map_sqft_input")
 
-    view_option = st.radio("Select View", ["Total Price", "Per Sq.ft"], horizontal=True)
+    if "price_per_sqft" in st.session_state:
+        price_per_sqft = st.session_state["price_per_sqft"]
+        total_price = map_sqft * price_per_sqft
 
-    if view_option == "Per Sq.ft":
-        st.markdown(f'''
-        <div style="background: rgba(255, 210, 0, 0.1); border: 1px solid #ffd200; border-radius: 15px; padding: 1.5rem; text-align: center; margin-top: 1rem;">
-            <div style="color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.3rem;">📍 Final Location Price</div>
-            <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">₹{int(price_per_sqft):,}<span style="font-size:1.2rem; color:#aaa;"> / sq.ft</span></div>
-            <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.1rem;">In {district}</div>
-        </div>
-        ''', unsafe_allow_html=True)
-    else:
-        st.markdown(f'''
-        <div style="background: rgba(255, 210, 0, 0.1); border: 1px solid #ffd200; border-radius: 15px; padding: 1.5rem; text-align: center; margin-top: 1rem;">
-            <div style="color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.3rem;">📍 Final Location Price</div>
-            <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">₹{int(total_price):,}<span style="font-size:1.2rem; color:#aaa;"> Total</span></div>
-            <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.1rem;">Rate: ₹{int(price_per_sqft)} / sqft in {district}</div>
-        </div>
-        ''', unsafe_allow_html=True)
+        view_option = st.radio("Select View", ["Per Sq.ft", "Total Price"], horizontal=True)
+
+        if view_option == "Per Sq.ft":
+            st.markdown(f'''
+            <div style="background: rgba(255, 210, 0, 0.1); border: 1px solid #ffd200; border-radius: 15px; padding: 1.5rem; text-align: center; margin-top: 1rem;">
+                <div style="color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.3rem;">📍 Final Location Price</div>
+                <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">₹{int(price_per_sqft):,}<span style="font-size:1.2rem; color:#aaa;"> / sq.ft</span></div>
+                <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.1rem;">In {district}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+        else:
+            st.markdown(f'''
+            <div style="background: rgba(255, 210, 0, 0.1); border: 1px solid #ffd200; border-radius: 15px; padding: 1.5rem; text-align: center; margin-top: 1rem;">
+                <div style="color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.3rem;">📍 Final Location Price</div>
+                <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">₹{int(total_price):,}<span style="font-size:1.2rem; color:#aaa;"> Total</span></div>
+                <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.1rem;">Rate: ₹{int(price_per_sqft)} / sqft × {map_sqft} sqft</div>
+            </div>
+            ''', unsafe_allow_html=True)
 
 
 
