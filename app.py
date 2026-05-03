@@ -849,20 +849,6 @@ if True:
         st.session_state.clicked_lat = 11.0168
         st.session_state.clicked_lon = 76.9558
 
-    TN_VILLAGES = {
-        "Chennai": ["Anna Nagar", "T. Nagar", "Velachery", "Adyar", "Mylapore", "Tambaram", "Perambur", "Guindy"],
-        "Coimbatore": ["Peelamedu", "RS Puram", "Gandhipuram", "Vadavalli", "Saravanampatti", "Pollachi", "Mettupalayam", "Singanallur"],
-        "Madurai": ["Anna Nagar", "KK Nagar", "Thiruparankundram", "Melur", "Usilampatti", "Tallakulam", "Arapalayam"],
-        "Trichy": ["Srirangam", "Thillai Nagar", "K K Nagar", "Thiruverumbur", "Manapparai", "Lalgudi", "Woraiyur"],
-        "Salem": ["Yercaud", "Omalur", "Attur", "Mettur", "Edappadi", "Ammapet", "Hasthampatti"],
-        "Chengalpattu": ["Mahabalipuram", "Maraimalai Nagar", "Guduvancheri", "Kelambakkam", "Chengalpattu Town"],
-        "Kanchipuram": ["Sriperumbudur", "Oragadam", "Uthiramerur", "Walajabad", "Kanchipuram Town"],
-        "Tiruvallur": ["Avadi", "Poonamallee", "Ponneri", "Gummidipoondi", "Tiruttani", "Tiruvallur Town"],
-        "Vellore": ["Katpadi", "Gudiyatham", "Arakkonam", "Arcot", "Vellore Town"],
-        "Tirunelveli": ["Palayamkottai", "Tenkasi", "Ambasamudram", "Nanguneri", "Tirunelveli Town"],
-        "Erode": ["Bhavani", "Gobichettipalayam", "Perundurai", "Sathyamangalam", "Erode Town"]
-    }
-
     # Set dropdown to the active district
     dist_list = list(district_price.keys())
     idx = dist_list.index(st.session_state.active_district) if st.session_state.active_district in dist_list else 1
@@ -871,8 +857,8 @@ if True:
     with col_d:
         selected_district = st.selectbox("📍 Select District", dist_list, index=idx)
     with col_v:
-        village_list = TN_VILLAGES.get(selected_district, ["Main City", "North Zone", "South Zone", "East Zone", "West Zone", "Rural Area"])
-        selected_village = st.selectbox("🏘️ Select Village / Area", village_list)
+        default_village = st.session_state.get("active_village", "")
+        selected_village = st.text_input("🏘️ Enter Village / Area", value=default_village, placeholder="e.g. Anna Nagar")
 
     if "active_village" not in st.session_state:
         st.session_state.active_village = selected_village
