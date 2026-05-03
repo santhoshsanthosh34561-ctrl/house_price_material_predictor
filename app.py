@@ -842,7 +842,7 @@ if True:
         else:
             return base_price * 0.7   # outskirts
 
-    if "active_district" not in st.session_state:
+    if "center_lat" not in st.session_state or "active_district" not in st.session_state:
         st.session_state.active_district = "Coimbatore"
         st.session_state.center_lat = 11.0168
         st.session_state.center_lon = 76.9558
