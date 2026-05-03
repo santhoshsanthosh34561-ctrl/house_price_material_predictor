@@ -946,21 +946,37 @@ if True:
                             if "[FLOORS]" in line: f_val = line.replace("[FLOORS]", "").strip()
                             if "[QUALITY]" in line: q_val = line.replace("[QUALITY]", "").strip()
 
+                        # ── Cost Calculation Logic ────────────────────────────
+                        # Use the formula: area * 2000 * quality_factor
+                        q_lower = q_val.lower()
+                        q_factor = 1.0 # default medium
+                        if "high" in q_lower or "premium" in q_lower: q_factor = 1.3
+                        elif "low" in q_lower or "basic" in q_lower: q_factor = 0.8
+                        
+                        img_cost = sqft * 2000 * q_factor
+
                         # UI Display
                         st.markdown(f'''
-                            <div style='display: grid; grid-template-columns: 1fr; gap: 10px;'>
+                            <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;'>
                                 <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #f7971e;'>
-                                    <div style='color: #888; font-size: 0.8rem; text-transform: uppercase;'>📏 House Size</div>
-                                    <div style='color: #ffd200; font-size: 1.1rem; font-weight: 700;'>{s_val}</div>
+                                    <div style='color: #888; font-size: 0.7rem; text-transform: uppercase;'>📏 House Size</div>
+                                    <div style='color: #ffd200; font-size: 1rem; font-weight: 700;'>{s_val}</div>
                                 </div>
                                 <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #28a745;'>
-                                    <div style='color: #888; font-size: 0.8rem; text-transform: uppercase;'>🏢 Number of Floors</div>
-                                    <div style='color: #fff; font-size: 1.1rem; font-weight: 700;'>{f_val}</div>
+                                    <div style='color: #888; font-size: 0.7rem; text-transform: uppercase;'>🏢 Floors</div>
+                                    <div style='color: #fff; font-size: 1rem; font-weight: 700;'>{f_val}</div>
                                 </div>
-                                <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #17a2b8;'>
-                                    <div style='color: #888; font-size: 0.8rem; text-transform: uppercase;'>🏗️ Construction Quality</div>
-                                    <div style='color: #fff; font-size: 1.1rem; font-weight: 700;'>{q_val}</div>
-                                </div>
+                            </div>
+                            
+                            <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #17a2b8; margin-bottom: 10px;'>
+                                <div style='color: #888; font-size: 0.7rem; text-transform: uppercase;'>🏗️ Construction Quality</div>
+                                <div style='color: #fff; font-size: 1rem; font-weight: 700;'>{q_val}</div>
+                            </div>
+
+                            <div style='background: linear-gradient(135deg, #f7971e22, #ffd20022); padding: 20px; border-radius: 12px; border: 1px solid #ffd200; text-align: center;'>
+                                <div style='color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;'>💰 Total Estimated Cost (AI Based)</div>
+                                <div style='color: #fff; font-size: 2.2rem; font-weight: 900;'>₹{int(img_cost):,}</div>
+                                <div style='color: #aaa; font-size: 0.8rem;'>Calculated for {sqft} sqft @ ₹{int(2000*q_factor)}/sqft</div>
                             </div>
                         ''', unsafe_allow_html=True)
 
