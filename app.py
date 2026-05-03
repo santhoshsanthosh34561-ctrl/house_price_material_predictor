@@ -943,8 +943,21 @@ if True:
     # Save price
     st.session_state["price_per_sqft"] = final_price_per_sqft
     
-    # Independent Sq.ft input for this section
-    map_sqft = st.number_input("📐 Enter Sq.ft for Location Calculation", min_value=100, value=1200, step=100, key="map_sqft_input")
+    # Independent Area input with Unit conversion
+    col_u1, col_u2 = st.columns(2)
+    with col_u1:
+        map_unit = st.selectbox("📐 Select Unit", ["Sq.ft", "Cent"], key="map_unit_select")
+    with col_u2:
+        map_area_val = 1200.0 if map_unit == "Sq.ft" else 2.5
+        map_area_step = 100.0 if map_unit == "Sq.ft" else 0.1
+        map_area_input = st.number_input(f"Enter Area in {map_unit}", min_value=0.1, value=map_area_val, step=map_area_step, key="map_area_input")
+
+    # Convert to sq.ft
+    if map_unit == "Cent":
+        map_sqft = map_area_input * 435.56
+        st.info(f"🔄 Converted: **{map_sqft:,.2f} sq.ft**")
+    else:
+        map_sqft = map_area_input
 
     if "price_per_sqft" in st.session_state:
         price_per_sqft = st.session_state["price_per_sqft"]
