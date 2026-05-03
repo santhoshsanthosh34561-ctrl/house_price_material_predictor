@@ -418,36 +418,56 @@ if uploaded_file is not None:
     except Exception as e:
         st.sidebar.error(f"Error: {e}")
 
-
 # ── AI Image Analysis ──────────────────────────────────────────────────────
+import json as _json
+import io as _io
+
 @st.cache_data(show_spinner=False)
-def get_ai_image_analysis(img_bytes, api_key):
+def analyze_image(img_bytes, api_key):
+    """Analyze house image using Gemini and return structured JSON result."""
     try:
-        if not api_key: return "ERROR: API Key is missing."
+        if not api_key:
+            return {"error": "API Key is missing. Please add it in the sidebar."}
         genai.configure(api_key=api_key)
-        # Use the latest flash model for guaranteed availability and speed
-        model = genai.GenerativeModel(
+        ai_model = genai.GenerativeModel(
             "gemini-flash-latest",
-            generation_config={"max_output_tokens": 400, "temperature": 0.3}
+            generation_config={"max_output_tokens": 300, "temperature": 0.2}
         )
-        
-        import io
-        img = Image.open(io.BytesIO(img_bytes))
-        # Resize for faster processing
-        img.thumbnail((512, 512))
-        
-        prompt = (
-            "Analyze this house image. You MUST return exactly 3 lines with these markers, nothing else:\n"
-            "[SIZE] (small/medium/large) + Brief description\n"
-            "[FLOORS] (Number of floors) + Brief description\n"
-            "[QUALITY] (low/medium/high) + Brief description\n"
-            "Provide descriptions in both English and Tamil (தமிழ்)."
-        )
-        
-        response = model.generate_content([prompt, img])
-        return response.text
+
+        img = Image.open(_io.BytesIO(img_bytes))
+        img.thumbnail((512, 512))  # Resize for speed
+
+        prompt = """
+Analyze this house image and return ONLY valid JSON, nothing else:
+
+{
+  "size": "small/medium/large",
+  "floors": number,
+  "quality": "low/medium/high"
+}
+"""
+
+        response = ai_model.generate_content([prompt, img])
+        raw_text = response.text.strip()
+
+        # Clean markdown fences if any
+        if raw_text.startswith("```"):
+            raw_text = raw_text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+
+        result = _json.loads(raw_text)
+        return result
+    except _json.JSONDecodeError:
+        return {"size": "medium", "floors": 1, "quality": "medium", "warning": "AI response was not valid JSON. Using defaults."}
     except Exception as e:
-        return f"ERROR: {str(e)}"
+        return {"error": str(e)}
+
+
+def estimate_cost(area, quality):
+    """Calculate estimated construction cost based on area and quality."""
+    cost_per_sqft = 2000
+    quality_factor = {"low": 0.8, "medium": 1.0, "high": 1.3}
+    return area * cost_per_sqft * quality_factor.get(quality, 1)
+
 
 # ── Model ─────────────────────────────────────────────────────────────────
 @st.cache_resource
@@ -922,12 +942,6 @@ if True:
     st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 5: 🖼️ AI Image-based House Evaluator</div>', unsafe_allow_html=True)
     st.write("Upload a picture of a house, and our AI will analyze the exterior to estimate its size, floors, and construction quality!")
 
-    # ── Cost estimation function ──
-    def estimate_cost(area, quality):
-        cost_per_sqft = 2000
-        quality_factor = {"low": 0.8, "medium": 1.0, "high": 1.3}
-        return area * cost_per_sqft * quality_factor.get(quality, 1.0)
-
     house_image = st.file_uploader("Upload House Image", type=["jpg", "jpeg", "png"], key="house_eval_uploader")
 
     if house_image is not None:
@@ -937,80 +951,68 @@ if True:
             st.image(house_image, caption="Uploaded House", use_container_width=True)
 
         with col_res:
-            # Auto-analyze on upload — store result in session_state to persist
+            # Auto-analyze on upload — hash to avoid re-scanning same image
             img_hash = hashlib.md5(house_image.getvalue()[:2048]).hexdigest()
-            if st.session_state.get("img_eval_hash") != img_hash:
-                # New image uploaded → run analysis
-                with st.spinner("🔍 AI is analyzing the house structure..."):
-                    analysis_result = get_ai_image_analysis(house_image.getvalue(), api_key)
 
-                if "ERROR" in analysis_result:
-                    st.error(analysis_result)
+            if st.session_state.get("img_eval_hash") != img_hash:
+                with st.spinner("🔍 AI is analyzing the house..."):
+                    result = analyze_image(house_image.getvalue(), api_key)
+
+                if "error" in result:
+                    st.error(f"⚠️ {result['error']}")
                     st.session_state["img_eval_hash"] = None
                 else:
-                    # Parse AI response
-                    s_val, f_val, q_val = "N/A", "N/A", "N/A"
-                    for line in analysis_result.split('\n'):
-                        line_upper = line.upper()
-                        if "[SIZE]" in line_upper: s_val = line.split("]", 1)[-1].strip()
-                        if "[FLOORS]" in line_upper: f_val = line.split("]", 1)[-1].strip()
-                        if "[QUALITY]" in line_upper: q_val = line.split("]", 1)[-1].strip()
+                    if result.get("warning"):
+                        st.warning(result["warning"])
 
-                    # Detect quality level for cost calc
-                    q_lower = q_val.lower()
-                    if "high" in q_lower or "premium" in q_lower:
-                        detected_quality = "high"
-                    elif "low" in q_lower or "basic" in q_lower:
-                        detected_quality = "low"
-                    else:
-                        detected_quality = "medium"
+                    # Extract values from JSON result
+                    size = result.get("size", "medium")
+                    floors = result.get("floors", 1)
+                    quality = result.get("quality", "medium")
 
-                    # Save everything in session_state
+                    # Save to session_state
                     st.session_state["img_eval_hash"] = img_hash
-                    st.session_state["img_eval_size"] = s_val
-                    st.session_state["img_eval_floors"] = f_val
-                    st.session_state["img_eval_quality"] = q_val
-                    st.session_state["img_eval_quality_key"] = detected_quality
-                    st.session_state["img_eval_raw"] = analysis_result
+                    st.session_state["img_eval_size"] = size
+                    st.session_state["img_eval_floors"] = floors
+                    st.session_state["img_eval_quality"] = quality
 
             # ── Always display from session_state (survives rerun) ──
             if st.session_state.get("img_eval_hash") == img_hash:
-                s_val = st.session_state.get("img_eval_size", "N/A")
-                f_val = st.session_state.get("img_eval_floors", "N/A")
-                q_val = st.session_state.get("img_eval_quality", "N/A")
-                detected_quality = st.session_state.get("img_eval_quality_key", "medium")
+                size = st.session_state.get("img_eval_size", "medium")
+                floors = st.session_state.get("img_eval_floors", 1)
+                quality = st.session_state.get("img_eval_quality", "medium")
 
-                # Calculate cost using the formula: area * 2000 * quality_factor
+                # Calculate cost: area * 2000 * quality_factor
                 area = sqft  # from sidebar
-                img_cost = estimate_cost(area, detected_quality)
-                q_rate = int(2000 * {"low": 0.8, "medium": 1.0, "high": 1.3}[detected_quality])
+                cost = estimate_cost(area, quality)
+                q_rate = int(2000 * {"low": 0.8, "medium": 1.0, "high": 1.3}.get(quality, 1.0))
 
                 st.success("✅ Analysis Complete!")
 
-                # UI Display
+                # Premium UI Cards
                 st.markdown(f'''
-                    <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;'>
-                        <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #f7971e;'>
-                            <div style='color: #888; font-size: 0.7rem; text-transform: uppercase;'>📏 House Size</div>
-                            <div style='color: #ffd200; font-size: 1rem; font-weight: 700;'>{s_val}</div>
+                    <div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;'>
+                        <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #f7971e; text-align: center;'>
+                            <div style='color: #888; font-size: 0.7rem; text-transform: uppercase;'>🏠 Size</div>
+                            <div style='color: #ffd200; font-size: 1.2rem; font-weight: 800;'>{size.upper()}</div>
                         </div>
-                        <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #28a745;'>
+                        <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #28a745; text-align: center;'>
                             <div style='color: #888; font-size: 0.7rem; text-transform: uppercase;'>🏢 Floors</div>
-                            <div style='color: #fff; font-size: 1rem; font-weight: 700;'>{f_val}</div>
+                            <div style='color: #fff; font-size: 1.2rem; font-weight: 800;'>{floors}</div>
                         </div>
-                    </div>
-                    
-                    <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #17a2b8; margin-bottom: 10px;'>
-                        <div style='color: #888; font-size: 0.7rem; text-transform: uppercase;'>🏗️ Construction Quality</div>
-                        <div style='color: #fff; font-size: 1rem; font-weight: 700;'>{q_val}</div>
+                        <div style='background: #1e1e1e; padding: 15px; border-radius: 12px; border-top: 4px solid #17a2b8; text-align: center;'>
+                            <div style='color: #888; font-size: 0.7rem; text-transform: uppercase;'>🧱 Quality</div>
+                            <div style='color: #fff; font-size: 1.2rem; font-weight: 800;'>{quality.upper()}</div>
+                        </div>
                     </div>
 
-                    <div style='background: linear-gradient(135deg, #f7971e22, #ffd20022); padding: 20px; border-radius: 12px; border: 1px solid #ffd200; text-align: center;'>
-                        <div style='color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;'>💰 Total Estimated Cost (AI Based)</div>
-                        <div style='color: #fff; font-size: 2.2rem; font-weight: 900;'>₹{int(img_cost):,}</div>
-                        <div style='color: #aaa; font-size: 0.8rem;'>Quality: {detected_quality.title()} · {area} sqft @ ₹{q_rate}/sqft</div>
+                    <div style='background: linear-gradient(135deg, #f7971e22, #ffd20022); padding: 20px; border-radius: 12px; border: 1.5px solid #ffd200; text-align: center;'>
+                        <div style='color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;'>💰 Estimated Cost</div>
+                        <div style='color: #fff; font-size: 2.5rem; font-weight: 900; margin: 5px 0;'>₹{int(cost):,}</div>
+                        <div style='color: #aaa; font-size: 0.8rem;'>{area} sqft × ₹{q_rate}/sqft ({quality.title()} quality)</div>
                     </div>
                 ''', unsafe_allow_html=True)
+
 
 
 if True:
