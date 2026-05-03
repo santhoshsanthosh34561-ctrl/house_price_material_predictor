@@ -421,6 +421,7 @@ if uploaded_file is not None:
 # ── AI Image Analysis ──────────────────────────────────────────────────────
 import json as _json
 import io as _io
+import re as _re
 
 @st.cache_data(show_spinner=False)
 def analyze_image(img_bytes, api_key):
@@ -429,35 +430,61 @@ def analyze_image(img_bytes, api_key):
         if not api_key:
             return {"error": "API Key is missing. Please add it in the sidebar."}
         genai.configure(api_key=api_key)
+        
+        # Use response_mime_type to force Gemini to return pure JSON
         ai_model = genai.GenerativeModel(
             "gemini-flash-latest",
-            generation_config={"max_output_tokens": 300, "temperature": 0.2}
+            generation_config={
+                "max_output_tokens": 200,
+                "temperature": 0.1,
+                "response_mime_type": "application/json"
+            }
         )
 
         img = Image.open(_io.BytesIO(img_bytes))
         img.thumbnail((512, 512))  # Resize for speed
 
-        prompt = """
-Analyze this house image and return ONLY valid JSON, nothing else:
-
-{
-  "size": "small/medium/large",
-  "floors": number,
-  "quality": "low/medium/high"
-}
-"""
+        prompt = (
+            'Analyze this house image. Return JSON with exactly these keys: '
+            '"size" (value must be "small" or "medium" or "large"), '
+            '"floors" (integer number), '
+            '"quality" (value must be "low" or "medium" or "high").'
+        )
 
         response = ai_model.generate_content([prompt, img])
         raw_text = response.text.strip()
 
-        # Clean markdown fences if any
-        if raw_text.startswith("```"):
-            raw_text = raw_text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        # Method 1: Try direct parse
+        try:
+            return _json.loads(raw_text)
+        except _json.JSONDecodeError:
+            pass
 
-        result = _json.loads(raw_text)
-        return result
-    except _json.JSONDecodeError:
-        return {"size": "medium", "floors": 1, "quality": "medium", "warning": "AI response was not valid JSON. Using defaults."}
+        # Method 2: Strip markdown fences (```json ... ```)
+        cleaned = _re.sub(r'^```[a-zA-Z]*\n?', '', raw_text)
+        cleaned = _re.sub(r'\n?```$', '', cleaned).strip()
+        try:
+            return _json.loads(cleaned)
+        except _json.JSONDecodeError:
+            pass
+
+        # Method 3: Extract first {...} block using regex
+        match = _re.search(r'\{[^{}]*\}', raw_text, _re.DOTALL)
+        if match:
+            try:
+                return _json.loads(match.group())
+            except _json.JSONDecodeError:
+                pass
+
+        # Method 4: Keyword extraction fallback — scan for values in raw text
+        raw_lower = raw_text.lower()
+        size = "large" if "large" in raw_lower else ("small" if "small" in raw_lower else "medium")
+        quality = "high" if "high" in raw_lower else ("low" if "low" in raw_lower else "medium")
+        floor_match = _re.search(r'"floors"\s*:\s*(\d+)', raw_text)
+        floors = int(floor_match.group(1)) if floor_match else 1
+        
+        return {"size": size, "floors": floors, "quality": quality}
+
     except Exception as e:
         return {"error": str(e)}
 
