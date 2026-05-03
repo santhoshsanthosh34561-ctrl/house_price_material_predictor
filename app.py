@@ -379,9 +379,9 @@ with st.sidebar:
     sqft = st.number_input(f"📐 {L['sqft']}", min_value=300, max_value=1000000, value=1200, step=50)
 
     Q_LEVELS = {
-        "Low":    {"mult": 0.78260869565, "label": "📉 Basic  ₹1800/sqft"},
-        "Medium": {"mult": 1.0,           "label": "🏢 Standard  ₹2300/sqft"},
-        "High":   {"mult": 1.30434782609, "label": "✨ Premium  ₹3000/sqft"},
+        "Low":    {"mult": 0.9, "label": "📉 Basic Quality"},
+        "Medium": {"mult": 1.0, "label": "🏢 Standard Quality"},
+        "High":   {"mult": 1.2, "label": "✨ Premium Quality"},
     }
     quality_key = st.select_slider("🏗️ Construction Quality", options=["Low", "Medium", "High"], value="Medium")
     Q = Q_LEVELS[quality_key]
@@ -659,9 +659,16 @@ if dist_km < 5: loc_mult, loc_label = 1.2, "City Center (High Demand)"
 elif dist_km < 15: loc_mult, loc_label = 1.0, "Suburban (Standard)"
 else: loc_mult, loc_label = 0.85, "Rural / Outskirts (Lower Cost)"
 
-inp = pd.DataFrame([[hall, bedroom, kitchen, sqft, floor, bathroom, garden_area, parking, pooja_room]], columns=FEATURE_COLS)
-base_pred = model.predict(inp)[0]
-pred = base_pred * Q["mult"] * loc_mult
+# ── Improved Construction Cost Logic ──────────────────────────────────────
+base_rate = 2300
+floor_factor = 1 + (floor - 1) * 0.15
+base_construction = sqft * base_rate * floor_factor
+interior_cost = sqft * 300
+parking_cost = parking * 50000
+misc_cost = 20000
+
+sub_total = base_construction + interior_cost + parking_cost + misc_cost
+pred = sub_total * Q["mult"] * loc_mult
 
 st.markdown("---")
 # nav removed
@@ -1037,21 +1044,31 @@ if True:
     user_budget = st.number_input("💰 Your Maximum Budget (₹)", min_value=500000, max_value=500000000, value=3000000, step=100000)
 
     if user_budget > 0:
-        # Fixed Construction Rates per sq.ft (ignoring location as requested)
-        premium_rate = 3000
-        standard_rate = 2300
-        basic_rate = 1800
-
+        base_rate = 2300
+        floor_factor = 1 + (floor - 1) * 0.15
+        
         def get_bhk(area):
             if area < 800: return "1 BHK"
             elif area < 1200: return "2 BHK"
             elif area < 2000: return "3 BHK"
             else: return "4 BHK"
 
+        q_factors = {"Premium": 1.2, "Standard": 1.0, "Basic": 0.9}
         rc1, rc2, rc3 = st.columns(3)
 
+        # Helper to calculate affordable sqft
+        # Budget = (Sqft * Rate * FloorFactor + Sqft * 300 + ParkingCost + Misc) * QMult
+        # Sqft * (Rate * FloorFactor + 300) = (Budget / QMult) - ParkingCost - Misc
+        
+        parking_cost = parking * 50000
+        misc_cost = 20000
+
         with rc1:
-            sq = int(user_budget / premium_rate)
+            # Premium
+            q_mult = q_factors["Premium"]
+            denom = (base_rate * floor_factor + 300)
+            sq = int(((user_budget / q_mult) - parking_cost - misc_cost) / denom)
+            sq = max(0, sq)
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #f7971e;">
                 <div style="color:#ffd200; font-weight:700; margin-bottom:8px;">🌟 Premium Option</div>
@@ -1062,7 +1079,11 @@ if True:
             </div>''', unsafe_allow_html=True)
 
         with rc2:
-            sq = int(user_budget / standard_rate)
+            # Standard
+            q_mult = q_factors["Standard"]
+            denom = (base_rate * floor_factor + 300)
+            sq = int(((user_budget / q_mult) - parking_cost - misc_cost) / denom)
+            sq = max(0, sq)
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #28a745;">
                 <div style="color:#28a745; font-weight:700; margin-bottom:8px;">🏢 Standard Option</div>
@@ -1073,7 +1094,11 @@ if True:
             </div>''', unsafe_allow_html=True)
 
         with rc3:
-            sq = int(user_budget / basic_rate)
+            # Basic
+            q_mult = q_factors["Basic"]
+            denom = (base_rate * floor_factor + 300)
+            sq = int(((user_budget / q_mult) - parking_cost - misc_cost) / denom)
+            sq = max(0, sq)
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #17a2b8;">
                 <div style="color:#17a2b8; font-weight:700; margin-bottom:8px;">📉 Basic Option</div>
