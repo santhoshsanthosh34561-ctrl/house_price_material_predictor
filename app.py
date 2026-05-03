@@ -444,12 +444,21 @@ def analyze_image(img_bytes, api_key):
         img = Image.open(_io.BytesIO(img_bytes))
         img.thumbnail((512, 512))  # Resize for speed
 
-        prompt = (
-            'Analyze this house image. Return JSON with exactly these keys: '
-            '"size" (value must be "small" or "medium" or "large"), '
-            '"floors" (integer number), '
-            '"quality" (value must be "low" or "medium" or "high").'
-        )
+        prompt = """
+Analyze this house image STRICTLY.
+
+Return ONLY JSON:
+
+{
+  "size": "small or medium or large",
+  "floors": exact number of floors you SEE (1,2,3),
+  "quality": "low or medium or high"
+}
+
+IMPORTANT:
+- Do NOT always return medium
+- Detect carefully from image
+"""
 
         response = ai_model.generate_content([prompt, img])
         raw_text = response.text.strip()
