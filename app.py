@@ -962,7 +962,7 @@ if True:
             <div style="background: rgba(255, 210, 0, 0.1); border: 1px solid #ffd200; border-radius: 15px; padding: 1.5rem; text-align: center; margin-top: 1rem;">
                 <div style="color: #ffd200; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.3rem;">📍 Final Location Price</div>
                 <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">₹{int(total_price):,}<span style="font-size:1.2rem; color:#aaa;"> Total</span></div>
-                <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.1rem;">Rate: ₹{int(price_per_sqft)} / sqft × {map_sqft} sqft</div>
+                <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.1rem;">Rate: ₹{int(price_per_sqft)} / sqft × {sqft} sqft</div>
             </div>
             ''', unsafe_allow_html=True)
 
