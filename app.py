@@ -345,6 +345,11 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ── Language selector ─────────────────────────────────────────────────────
+# ── PRE-CONTENT INITIALIZATION ──────────────────────────────────────────────
+# We need Language and L before the sidebar starts if possible, or just before hero
+if "sel_lang" not in st.session_state: st.session_state.sel_lang = LANG_LIST[0]
+L = LANGUAGES[st.session_state.sel_lang]
+
 with st.sidebar:
     st.markdown(f"<b style='color:#ffd200;font-size:1rem;'>👤 {st.session_state.username}</b>", unsafe_allow_html=True)
     if st.button("Logout", width='stretch'):
@@ -367,17 +372,7 @@ with st.sidebar:
     if st.session_state.get("last_ai_error") and "403" in st.session_state.get("last_ai_error", ""):
         st.error("⚠️ API Key Disabled. Please update it in the sidebar.")
 
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section-title">🌐 Language</div>', unsafe_allow_html=True)
-    sel_lang = st.selectbox("Language", LANG_LIST, index=0, label_visibility="collapsed")
-    L = LANGUAGES[sel_lang]
-
-    # Only Dataset upload remains in sidebar
-    # House details moved to main page
-
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section-title">📁 Dataset</div>', unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"])
+    # Language and Dataset moved to main page
 
 # Dataset upload handler — ONLY for EDA Analytics (does NOT affect price calcu
 # lation)
@@ -404,7 +399,7 @@ if uploaded_file is not None:
             new_df.rename(columns={new_df.columns[-1]: 'price'}, inplace=True)
 
         if 'sqft' not in new_df.columns or 'price' not in new_df.columns:
-            st.sidebar.error(f"❌ Cannot identify 'sqft' or 'price'. Found columns: {list(new_df.columns)}")
+            st.error(f"❌ Cannot identify 'sqft' or 'price'. Found columns: {list(new_df.columns)}")
         else:
             # Add missing optional columns as 0
             missing = []
@@ -417,10 +412,10 @@ if uploaded_file is not None:
             st.session_state["uploaded_eda_df"] = new_df[FEATURE_COLS + ['price']]
             
             if missing:
-                st.sidebar.warning(f"⚠️ Added missing columns with 0: {', '.join(missing)}")
-            st.sidebar.success("✅ Dataset loaded for EDA Analytics!")
+                st.warning(f"⚠️ Added missing columns with 0: {', '.join(missing)}")
+            st.success("✅ Dataset loaded for EDA Analytics!")
     except Exception as e:
-        st.sidebar.error(f"Error reading CSV: {e}")
+        st.error(f"Error reading CSV: {e}")
 
 # ── AI Image Analysis ──────────────────────────────────────────────────────
 import json as _json
@@ -621,6 +616,19 @@ st.markdown(f"""
     <div class="hero-divider"></div>
 </div>
 """, unsafe_allow_html=True)
+
+# ── MAIN PAGE CONTROLS (Language & Dataset) ──────────────────────────────────
+mcol1, mcol2 = st.columns([1, 2])
+with mcol1:
+    st.markdown('<div style="font-weight:700; color:#ffd200; margin-bottom:5px;">🌐 Select Language</div>', unsafe_allow_html=True)
+    sel_lang = st.selectbox("Language", LANG_LIST, index=LANG_LIST.index(st.session_state.sel_lang), label_visibility="collapsed", key="main_lang_sel")
+    if sel_lang != st.session_state.sel_lang:
+        st.session_state.sel_lang = sel_lang
+        st.rerun()
+
+with mcol2:
+    st.markdown('<div style="font-weight:700; color:#ffd200; margin-bottom:5px;">📁 Dataset Analysis (CSV)</div>', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"], label_visibility="collapsed", key="main_dataset_up")
 
 # ── HOUSE DETAILS – Main Page Inputs ──────────────────────────────────────
 st.markdown(f'<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 1rem;">📐 {L["house_details"]}</div>', unsafe_allow_html=True)
