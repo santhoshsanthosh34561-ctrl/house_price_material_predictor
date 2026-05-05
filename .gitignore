@@ -1,0 +1,5 @@
+.streamlit/secrets.toml
+__pycache__/
+*.pyc
+house_model_v*.pkl
+santhosh_ai.db

@@ -387,14 +387,14 @@ with st.sidebar:
     Q = Q_LEVELS[quality_key]
 
     st.markdown('<div class="sidebar-section-title">🏠 Rooms</div>', unsafe_allow_html=True)
-    bedroom    = st.selectbox(f"🛏️ {L['bedrooms']}",  [1, 2, 3, 4, 5, 6], index=1)
-    hall       = st.selectbox(f"🛋️ {L['halls']}",     [1, 2, 3, 4, 5],    index=0)
-    kitchen    = st.selectbox(f"🍳 {L['kitchens']}",  [1, 2],              index=0)
-    bathroom   = st.selectbox(f"🚿 {L['bathrooms']}", [1, 2, 3, 4, 5, 6], index=1)
-    pooja_room = st.selectbox(f"🪔 {L['pooja']}",     [0, 1, 2, 3],        index=0)
+    bedroom    = st.selectbox(f"🛏️ {L['bedrooms']}",  [1, 2, 3, 4, 5, 6], index=1, key="sb_bedroom")
+    hall       = st.selectbox(f"🛋️ {L['halls']}",     [1, 2, 3, 4, 5],    index=0, key="sb_hall")
+    kitchen    = st.selectbox(f"🍳 {L['kitchens']}",  [1, 2],              index=0, key="sb_kitchen")
+    bathroom   = st.selectbox(f"🚿 {L['bathrooms']}", [1, 2, 3, 4, 5, 6], index=1, key="sb_bathroom")
+    pooja_room = st.selectbox(f"🪔 {L['pooja']}",     [0, 1, 2, 3],        index=0, key="sb_pooja")
 
     st.markdown('<div class="sidebar-section-title">🏢 Structure</div>', unsafe_allow_html=True)
-    floor   = st.selectbox(f"🏢 {L['floors']}",  [1, 2, 3, 4, 5], index=0)
+    floor   = st.selectbox(f"🏢 {L['floors']}",  [0, 1, 2, 3, 4, 5], index=1)
     parking = st.selectbox(f"🚗 {L['parking']}", [0, 1, 2, 3, 4], index=1)
     garden_area = st.number_input(f"🌿 {L['garden']}", min_value=0, max_value=5000, value=0, step=50)
 
@@ -659,19 +659,26 @@ if dist_km < 5: loc_mult, loc_label = 1.2, "City Center (High Demand)"
 elif dist_km < 15: loc_mult, loc_label = 1.0, "Suburban (Standard)"
 else: loc_mult, loc_label = 0.85, "Rural / Outskirts (Lower Cost)"
 
-# ── Improved Construction Cost Logic ──────────────────────────────────────
-base_rate = 2300
-floor_factor = 1 + (floor - 1) * 0.15
-base_construction = sqft * base_rate * floor_factor
-interior_cost = sqft * 300
-parking_cost = parking * 50000
+# ── New Total Cost Formula ───────────────────────────────────────────
+base_rate = 2000  # Base rate per sqft
+area_cost = sqft * floor * base_rate
 
-# Add room-specific construction costs
-room_cost = (hall * 50000) + (kitchen * 80000) + (bathroom * 60000) + (pooja_room * 30000)
+# Room-specific costs (L = Lakh = 100,000)
+bedroom_cost  = bedroom * 200000
+hall_cost     = hall * 150000
+bathroom_cost = bathroom * 100000
+kitchen_cost  = kitchen * 150000
 
-misc_cost = 20000
+# Amenity Extras (Flat rates)
+pooja_extra   = 50000 if pooja_room > 0 else 0
+garden_extra  = 100000 if garden_area > 0 else 0
+parking_extra = 80000 if parking > 0 else 0
 
-sub_total = base_construction + interior_cost + parking_cost + room_cost + misc_cost
+# Calculate Sub-total
+sub_total = area_cost + bedroom_cost + hall_cost + bathroom_cost + kitchen_cost + \
+            pooja_extra + garden_extra + parking_extra
+
+# Apply Quality (Q) and Location multipliers
 pred = sub_total * Q["mult"] * loc_mult
 
 st.markdown("---")
@@ -682,7 +689,7 @@ if True:
     st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px;">Step 1: 🔮 Prediction & Cost</div>', unsafe_allow_html=True)
     # ── Config summary chips ──────────────────────────────────────────────────
     chips = [
-        f"📐 {sqft} sqft", f"🏗️ {quality_key}", f"🛏️ {bedroom} Bed",
+        f"📐 {sqft} sqft", f"🏗️ {quality_key}", f"🛏️ {bedroom} BHK",
         f"🛋️ {hall} Hall", f"🍳 {kitchen} Kitchen", f"🏢 {floor} Floor",
         f"🚿 {bathroom} Bath", f"🚗 {parking} Park",
         "🌿 Garden" if garden_area > 0 else "🚫 No Garden",
@@ -698,11 +705,12 @@ if True:
         pass
 
     # ── Price Result Card ─────────────────────────────────────────────────
+    room_desc = f"{bedroom} BHK, {hall} Hall, {kitchen} Kit"
     st.markdown(f'''
     <div class="price-card">
         <div class="price-label">✦ Estimated Construction Cost</div>
         <div class="price-value">₹{int(pred):,}</div>
-        <div class="price-range">{Q['label']} &nbsp;·&nbsp; {sqft} sqft &nbsp;·&nbsp; {floor} Floor{'s' if floor > 1 else ''}</div>
+        <div class="price-range">{Q['label']} Quality &nbsp;·&nbsp; {room_desc} &nbsp;·&nbsp; {sqft} sqft &nbsp;·&nbsp; {floor} Floor</div>
     </div>
     ''', unsafe_allow_html=True)
 
@@ -1060,19 +1068,23 @@ if True:
         q_factors = {"Premium": 1.2, "Standard": 1.0, "Basic": 0.9}
         rc1, rc2, rc3 = st.columns(3)
 
-        # Helper to calculate affordable sqft
-        # Budget = (Sqft * Rate * FloorFactor + Sqft * 300 + ParkingCost + Misc) * QMult
-        # Sqft * (Rate * FloorFactor + 300) = (Budget / QMult) - ParkingCost - Misc
+        # New Fixed Costs from sidebar inputs
+        fixed_room_costs = (bedroom * 200000) + (hall * 150000) + (bathroom * 100000) + (kitchen * 150000)
+        fixed_amenity_costs = (50000 if pooja_room > 0 else 0) + (100000 if garden_area > 0 else 0) + (80000 if parking > 0 else 0)
+        total_fixed = fixed_room_costs + fixed_amenity_costs
         
-        parking_cost = parking * 50000
-        misc_cost = 20000
-        room_cost = (hall * 50000) + (kitchen * 80000) + (bathroom * 60000) + (pooja_room * 30000)
+        # New Base Rate
+        base_rate = 2000
+        
+        # Helper to calculate affordable sqft
+        # Total = (Sqft * Floor * 2000 + total_fixed) * QMult * LocMult
+        # Sqft = ((Budget / (QMult * LocMult)) - total_fixed) / (Floor * 2000)
 
         with rc1:
             # Premium
             q_mult = q_factors["Premium"]
-            denom = (base_rate * floor_factor + 300)
-            sq = int(((user_budget / q_mult) - parking_cost - misc_cost - room_cost) / denom)
+            adjusted_budget = (user_budget / (q_mult * loc_mult))
+            sq = int((adjusted_budget - total_fixed) / (floor * base_rate))
             sq = max(0, sq)
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #f7971e;">
@@ -1086,8 +1098,8 @@ if True:
         with rc2:
             # Standard
             q_mult = q_factors["Standard"]
-            denom = (base_rate * floor_factor + 300)
-            sq = int(((user_budget / q_mult) - parking_cost - misc_cost - room_cost) / denom)
+            adjusted_budget = (user_budget / (q_mult * loc_mult))
+            sq = int((adjusted_budget - total_fixed) / (floor * base_rate))
             sq = max(0, sq)
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #28a745;">
@@ -1101,8 +1113,8 @@ if True:
         with rc3:
             # Basic
             q_mult = q_factors["Basic"]
-            denom = (base_rate * floor_factor + 300)
-            sq = int(((user_budget / q_mult) - parking_cost - misc_cost - room_cost) / denom)
+            adjusted_budget = (user_budget / (q_mult * loc_mult))
+            sq = int((adjusted_budget - total_fixed) / (floor * base_rate))
             sq = max(0, sq)
             st.markdown(f'''
             <div class="stage-card" style="border-top: 3px solid #17a2b8;">
