@@ -379,7 +379,8 @@ with st.sidebar:
     st.markdown('<div class="sidebar-section-title">📁 Dataset</div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"])
 
-# Dataset upload handler — ONLY for EDA Analytics (does NOT affect price calculation)
+# Dataset upload handler — ONLY for EDA Analytics (does NOT affect price calcu
+# lation)
 FEATURE_COLS = ['hall', 'bedroom', 'kitchen', 'sqft', 'floor', 'bathroom', 'garden_area', 'parking', 'pooja_room']
 if uploaded_file is not None:
     try:
@@ -645,7 +646,7 @@ with r2c1:
     bedroom    = st.selectbox(f"🛏️ {L['bedrooms']}",  [1, 2, 3, 4, 5, 6], index=1, key="main_bedroom")
     hall       = st.selectbox(f"🛋️ {L['halls']}",     [1, 2, 3, 4, 5],    index=0, key="main_hall")
 with r2c2:
-    kitchen    = st.selectbox(f"🍳 {L['kitchens']}",  [1, 2],              index=0, key="main_kitchen")
+    kitchen    = st.selectbox(f"🍳 {L['kitchens']}",  [1, 2,3,4,5],              index=0, key="main_kitchen")
     bathroom   = st.selectbox(f"🚿 {L['bathrooms']}", [1, 2, 3, 4, 5, 6], index=1, key="main_bathroom")
 with r2c3:
     pooja_room = st.selectbox(f"🪔 {L['pooja']}",     [0, 1, 2, 3],        index=0, key="main_pooja")
@@ -661,6 +662,8 @@ with r3c3:
     garden_area = st.number_input(f"🌿 {L['garden']}", min_value=0, max_value=5000, value=0, step=50, key="main_garden")
 
 st.markdown("---")
+if st.button(L["predict_btn"], type="primary", use_container_width=True):
+    st.session_state.show_results = True
 
 # ── Global Calculations ────────────────────────────────────────────────────
 CITY_CENTER = [13.0827, 80.2707]
@@ -698,7 +701,7 @@ st.markdown("---")
 # nav removed
 st.markdown("---")
 
-if True:
+if st.session_state.get("show_results"):
     st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px;">Step 1: 🔮 Prediction & Cost</div>', unsafe_allow_html=True)
     # ── Config summary chips ──────────────────────────────────────────────────
     chips = [
