@@ -19,6 +19,8 @@ from datetime import datetime
 import google.generativeai as genai  # type: ignore
 from PIL import Image # type: ignore
 
+FEATURE_COLS = ['hall', 'bedroom', 'kitchen', 'sqft', 'floor', 'bathroom', 'garden_area', 'parking', 'pooja_room']
+
 # ── Database Initialization ───────────────────────────────────────────────
 def init_db():
     conn = sqlite3.connect('santhosh_ai.db', check_same_thread=False)
@@ -374,48 +376,6 @@ with st.sidebar:
 
     # Language and Dataset moved to main page
 
-# Dataset upload handler — ONLY for EDA Analytics (does NOT affect price calcu
-# lation)
-FEATURE_COLS = ['hall', 'bedroom', 'kitchen', 'sqft', 'floor', 'bathroom', 'garden_area', 'parking', 'pooja_room']
-if uploaded_file is not None:
-    try:
-        new_df = pd.read_csv(uploaded_file)
-        # Normalize column names: lowercase and strip spaces
-        new_df.columns = new_df.columns.str.strip().str.lower()
-        
-        # Auto-map common column variations
-        rename_map = {
-            'area': 'sqft', 'square feet': 'sqft', 'sq.ft': 'sqft', 
-            'cost': 'price', 'amount': 'price',
-            'beds': 'bedroom', 'rooms': 'bedroom',
-            'baths': 'bathroom', 'bathrooms': 'bathroom'
-        }
-        new_df.rename(columns=rename_map, inplace=True)
-        
-        # Fallback: If headers are completely missing/broken, guess based on position
-        if 'sqft' not in new_df.columns and len(new_df.columns) >= 4:
-            new_df.rename(columns={new_df.columns[3]: 'sqft'}, inplace=True)
-        if 'price' not in new_df.columns and len(new_df.columns) >= 1:
-            new_df.rename(columns={new_df.columns[-1]: 'price'}, inplace=True)
-
-        if 'sqft' not in new_df.columns or 'price' not in new_df.columns:
-            st.error(f"❌ Cannot identify 'sqft' or 'price'. Found columns: {list(new_df.columns)}")
-        else:
-            # Add missing optional columns as 0
-            missing = []
-            for col in FEATURE_COLS:
-                if col not in new_df.columns:
-                    new_df[col] = 0
-                    missing.append(col)
-                    
-            # Store in session_state for EDA use only (does NOT overwrite main CSV)
-            st.session_state["uploaded_eda_df"] = new_df[FEATURE_COLS + ['price']]
-            
-            if missing:
-                st.warning(f"⚠️ Added missing columns with 0: {', '.join(missing)}")
-            st.success("✅ Dataset loaded for EDA Analytics!")
-    except Exception as e:
-        st.error(f"Error reading CSV: {e}")
 
 # ── AI Image Analysis ──────────────────────────────────────────────────────
 import json as _json
@@ -629,6 +589,47 @@ with mcol1:
 with mcol2:
     st.markdown('<div style="font-weight:700; color:#ffd200; margin-bottom:5px;">📁 Dataset Analysis (CSV)</div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"], label_visibility="collapsed", key="main_dataset_up")
+
+# Dataset upload handler — ONLY for EDA Analytics (does NOT affect price calculation)
+if uploaded_file is not None:
+    try:
+        new_df = pd.read_csv(uploaded_file)
+        # Normalize column names: lowercase and strip spaces
+        new_df.columns = new_df.columns.str.strip().str.lower()
+        
+        # Auto-map common column variations
+        rename_map = {
+            'area': 'sqft', 'square feet': 'sqft', 'sq.ft': 'sqft', 
+            'cost': 'price', 'amount': 'price',
+            'beds': 'bedroom', 'rooms': 'bedroom',
+            'baths': 'bathroom', 'bathrooms': 'bathroom'
+        }
+        new_df.rename(columns=rename_map, inplace=True)
+        
+        # Fallback: If headers are completely missing/broken, guess based on position
+        if 'sqft' not in new_df.columns and len(new_df.columns) >= 4:
+            new_df.rename(columns={new_df.columns[3]: 'sqft'}, inplace=True)
+        if 'price' not in new_df.columns and len(new_df.columns) >= 1:
+            new_df.rename(columns={new_df.columns[-1]: 'price'}, inplace=True)
+
+        if 'sqft' not in new_df.columns or 'price' not in new_df.columns:
+            st.error(f"❌ Cannot identify 'sqft' or 'price'. Found columns: {list(new_df.columns)}")
+        else:
+            # Add missing optional columns as 0
+            missing = []
+            for col in FEATURE_COLS:
+                if col not in new_df.columns:
+                    new_df[col] = 0
+                    missing.append(col)
+                    
+            # Store in session_state for EDA use only (does NOT overwrite main CSV)
+            st.session_state["uploaded_eda_df"] = new_df[FEATURE_COLS + ['price']]
+            
+            if missing:
+                st.warning(f"⚠️ Added missing columns with 0: {', '.join(missing)}")
+            st.success("✅ Dataset loaded for EDA Analytics!")
+    except Exception as e:
+        st.error(f"Error reading CSV: {e}")
 
 # ── HOUSE DETAILS – Main Page Inputs ──────────────────────────────────────
 st.markdown(f'<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 1rem;">📐 {L["house_details"]}</div>', unsafe_allow_html=True)
