@@ -379,7 +379,7 @@ with st.sidebar:
     st.markdown('<div class="sidebar-section-title">📁 Dataset</div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"])
 
-# Dataset upload handler
+# Dataset upload handler — ONLY for EDA Analytics (does NOT affect price calculation)
 FEATURE_COLS = ['hall', 'bedroom', 'kitchen', 'sqft', 'floor', 'bathroom', 'garden_area', 'parking', 'pooja_room']
 if uploaded_file is not None:
     try:
@@ -412,16 +412,12 @@ if uploaded_file is not None:
                     new_df[col] = 0
                     missing.append(col)
                     
-            # Save formatted dataset
-            new_df = new_df[FEATURE_COLS + ['price']]
-            new_df.to_csv("house_prediction.csv", index=False)
-            if os.path.exists("house_model_v6.pkl"):
-                os.remove("house_model_v6.pkl")
-            st.cache_resource.clear()
+            # Store in session_state for EDA use only (does NOT overwrite main CSV)
+            st.session_state["uploaded_eda_df"] = new_df[FEATURE_COLS + ['price']]
             
             if missing:
                 st.sidebar.warning(f"⚠️ Added missing columns with 0: {', '.join(missing)}")
-            st.sidebar.success("✅ Dataset Updated! Model Retrained!")
+            st.sidebar.success("✅ Dataset loaded for EDA Analytics!")
     except Exception as e:
         st.sidebar.error(f"Error reading CSV: {e}")
 
@@ -1146,7 +1142,12 @@ if True:
 if True:
     st.markdown('<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 3rem;">Step 4: 📊 EDA & Data Analysis Dashboard</div>', unsafe_allow_html=True)
     try:
-        raw_df = pd.read_csv('house_prediction.csv')
+        # Use uploaded dataset for EDA if available, otherwise use default
+        if "uploaded_eda_df" in st.session_state:
+            raw_df = st.session_state["uploaded_eda_df"]
+            st.info("📁 Using your uploaded dataset for analysis.")
+        else:
+            raw_df = pd.read_csv('house_prediction.csv')
         option = st.selectbox("Choose Analysis", [
             "Area vs Price (Scatter Plot)",
             "Price Distribution (Histogram)",
