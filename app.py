@@ -372,31 +372,8 @@ with st.sidebar:
     sel_lang = st.selectbox("Language", LANG_LIST, index=0, label_visibility="collapsed")
     L = LANGUAGES[sel_lang]
 
-    # ── SIDEBAR INPUTS ────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section-title">📐 House Details</div>', unsafe_allow_html=True)
-
-    sqft = st.number_input(f"📐 {L['sqft']}", min_value=300, max_value=1000000, value=1200, step=50)
-
-    Q_LEVELS = {
-        "Low":    {"mult": 0.9, "label": "📉 Basic Quality"},
-        "Medium": {"mult": 1.0, "label": "🏢 Standard Quality"},
-        "High":   {"mult": 1.2, "label": "✨ Premium Quality"},
-    }
-    quality_key = st.select_slider("🏗️ Construction Quality", options=["Low", "Medium", "High"], value="Medium")
-    Q = Q_LEVELS[quality_key]
-
-    st.markdown('<div class="sidebar-section-title">🏠 Rooms</div>', unsafe_allow_html=True)
-    bedroom    = st.selectbox(f"🛏️ {L['bedrooms']}",  [1, 2, 3, 4, 5, 6], index=1, key="sb_bedroom")
-    hall       = st.selectbox(f"🛋️ {L['halls']}",     [1, 2, 3, 4, 5],    index=0, key="sb_hall")
-    kitchen    = st.selectbox(f"🍳 {L['kitchens']}",  [1, 2],              index=0, key="sb_kitchen")
-    bathroom   = st.selectbox(f"🚿 {L['bathrooms']}", [1, 2, 3, 4, 5, 6], index=1, key="sb_bathroom")
-    pooja_room = st.selectbox(f"🪔 {L['pooja']}",     [0, 1, 2, 3],        index=0, key="sb_pooja")
-
-    st.markdown('<div class="sidebar-section-title">🏢 Structure</div>', unsafe_allow_html=True)
-    floor   = st.selectbox(f"🏢 {L['floors']}",  [0, 1, 2, 3, 4, 5], index=1)
-    parking = st.selectbox(f"🚗 {L['parking']}", [0, 1, 2, 3, 4], index=1)
-    garden_area = st.number_input(f"🌿 {L['garden']}", min_value=0, max_value=5000, value=0, step=50)
+    # Only Dataset upload remains in sidebar
+    # House details moved to main page
 
     st.markdown("---")
     st.markdown('<div class="sidebar-section-title">📁 Dataset</div>', unsafe_allow_html=True)
@@ -648,6 +625,46 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ── HOUSE DETAILS – Main Page Inputs ──────────────────────────────────────
+st.markdown(f'<div class="sec-hdr" style="font-size: 1.5rem; border-left: 5px solid #ffd200; padding-left: 10px; margin-top: 1rem;">📐 {L["house_details"]}</div>', unsafe_allow_html=True)
+
+Q_LEVELS = {
+    "Low":    {"mult": 0.9, "label": "📉 Basic Quality"},
+    "Medium": {"mult": 1.0, "label": "🏢 Standard Quality"},
+    "High":   {"mult": 1.2, "label": "✨ Premium Quality"},
+}
+
+# Row 1: Area & Quality
+r1c1, r1c2 = st.columns(2)
+with r1c1:
+    sqft = st.number_input(f"📐 {L['sqft']}", min_value=300, max_value=1000000, value=1200, step=50, key="main_sqft")
+with r1c2:
+    quality_key = st.select_slider("🏗️ Construction Quality", options=["Low", "Medium", "High"], value="Medium", key="main_quality")
+Q = Q_LEVELS[quality_key]
+
+# Row 2: Rooms (3 columns)
+st.markdown('<div style="margin-top: 0.5rem; color: #ffd200; font-weight: 700; font-size: 0.9rem;">🏠 Rooms</div>', unsafe_allow_html=True)
+r2c1, r2c2, r2c3 = st.columns(3)
+with r2c1:
+    bedroom    = st.selectbox(f"🛏️ {L['bedrooms']}",  [1, 2, 3, 4, 5, 6], index=1, key="main_bedroom")
+    hall       = st.selectbox(f"🛋️ {L['halls']}",     [1, 2, 3, 4, 5],    index=0, key="main_hall")
+with r2c2:
+    kitchen    = st.selectbox(f"🍳 {L['kitchens']}",  [1, 2],              index=0, key="main_kitchen")
+    bathroom   = st.selectbox(f"🚿 {L['bathrooms']}", [1, 2, 3, 4, 5, 6], index=1, key="main_bathroom")
+with r2c3:
+    pooja_room = st.selectbox(f"🪔 {L['pooja']}",     [0, 1, 2, 3],        index=0, key="main_pooja")
+
+# Row 3: Structure (3 columns)
+st.markdown('<div style="margin-top: 0.5rem; color: #ffd200; font-weight: 700; font-size: 0.9rem;">🏢 Structure</div>', unsafe_allow_html=True)
+r3c1, r3c2, r3c3 = st.columns(3)
+with r3c1:
+    floor   = st.selectbox(f"🏢 {L['floors']}",  [0, 1, 2, 3, 4, 5], index=1, key="main_floor")
+with r3c2:
+    parking = st.selectbox(f"🚗 {L['parking']}", [0, 1, 2, 3, 4], index=1, key="main_parking")
+with r3c3:
+    garden_area = st.number_input(f"🌿 {L['garden']}", min_value=0, max_value=5000, value=0, step=50, key="main_garden")
+
+st.markdown("---")
 
 # ── Global Calculations ────────────────────────────────────────────────────
 CITY_CENTER = [13.0827, 80.2707]
